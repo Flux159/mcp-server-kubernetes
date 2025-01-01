@@ -1,4 +1,5 @@
 # mcp-server-kubernetes
+[![smithery badge](https://smithery.ai/badge/mcp-server-kubernetes)](https://smithery.ai/server/mcp-server-kubernetes)
 
 MCP Server that can connect to a Kubernetes cluster and manage it.
 
@@ -8,6 +9,15 @@ https://github.com/user-attachments/assets/f25f8f4e-4d04-479b-9ae0-5dac452dd2ed
 
 ## Usage with Claude Desktop
 
+### Installing via Smithery
+
+To install Kubernetes Server for Claude Desktop automatically via [Smithery](https://smithery.ai/server/mcp-server-kubernetes):
+
+```bash
+npx -y @smithery/cli install mcp-server-kubernetes --client claude
+```
+
+### Manual Installation
 ```json
 {
   "mcpServers": {
