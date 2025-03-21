@@ -42,6 +42,7 @@ import { serverConfig } from "./config/server-config.js";
 import { createDeploymentSchema } from "./config/deployment-config.js";
 import { listNamespacesSchema } from "./config/namespace-config.js";
 import { cleanupSchema } from "./config/cleanup-config.js";
+import { startForwardPort,stopPortForward,PortForwardSchema } from "./tools/forward_port.js";
 
 const k8sManager = new KubernetesManager();
 
@@ -74,6 +75,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       listServicesSchema,
       uninstallHelmChartSchema,
       upgradeHelmChartSchema,
+      PortForwardSchema
     ],
   };
 });
@@ -263,6 +265,22 @@ server.setRequestHandler(
           );
         }
 
+        case "start_forwardport": {
+          return await startForwardPort(
+            k8sManager,
+            input as {
+              resourceType: string;
+              resourceName: string;
+              localPort: number;
+              targetPort: number;
+            }
+          )
+        }
+        
+        case "stop_forwardport": {
+          return await stopPortForward()
+        }
+        
         default:
           throw new McpError(ErrorCode.InvalidRequest, `Unknown tool: ${name}`);
       }
