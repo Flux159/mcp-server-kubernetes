@@ -42,10 +42,19 @@ jobs:
           # Verify the change took effect
           grep "server:" ~/.kube/config
 
-      - name: Run Tests
+      - name: Run tests and generate JUnit report
         run: |
-          # Your script will now use the modified kubeconfig
-          bun run test
+          # Run tests with JUnit reporter
+          bun run test --reporter junit > junit-results.xml
+
+      - name: Test Report
+        uses: dorny/test-reporter@v2
+        if: always()
+        with:
+          name: Bun Tests # Name of the check run which will be created
+          path: junit-results.xml # Path to test results
+          reporter: jest-junit # Format of test results (jest-junit is compatible with Bun's JUnit output)
+          fail-on-error: true # Fail the workflow if there are test failures
 
       - name: Verify build works
         run: bun run build

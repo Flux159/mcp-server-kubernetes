@@ -116,4 +116,4 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: flux159/mcp-server-kubernetes:latest,flux159/mcp-server-kubernetes:${{ steps.version.outputs.current-version }}
+          tags: flux159/${{ github.event.repository.name }}:latest,flux159/${{ github.event.repository.name }}:${{ steps.version.outputs.current-version }}

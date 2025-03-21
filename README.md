@@ -1,4 +1,15 @@
-# mcp-server-kubernetes
+# MCP Server Kubernetes
+
+[![CI](https://github.com/Flux159/mcp-server-kubernetes/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/mcp-server-kubernetes/actions/workflows/ci.yml)
+[![Language](https://img.shields.io/github/languages/top/Flux159/mcp-server-kubernetes)](https://github.com/yourusername/mcp-server-kubernetes)
+[![Bun](https://img.shields.io/badge/runtime-bun-orange)](https://bun.sh)
+[![Kubernetes](https://img.shields.io/badge/kubernetes-%23326ce5.svg?style=flat&logo=kubernetes&logoColor=white)](https://kubernetes.io/)
+[![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=flat&logo=docker&logoColor=white)](https://www.docker.com/)
+[![Stars](https://img.shields.io/github/stars/Flux159/mcp-server-kubernetes)](https://github.com/Flux159/mcp-server-kubernetes/stargazers)
+[![Issues](https://img.shields.io/github/issues/Flux159/mcp-server-kubernetes)](https://github.com/Flux159/mcp-server-kubernetes/issues)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/Flux159/mcp-server-kubernetes/pulls)
+[![Last Commit](https://img.shields.io/github/last-commit/Flux159/mcp-server-kubernetes)](https://github.com/Flux159/mcp-server-kubernetes/commits/main)
+[![smithery badge](https://smithery.ai/badge/mcp-server-kubernetes)](https://smithery.ai/protocol/mcp-server-kubernetes)
 
 MCP Server that can connect to a Kubernetes cluster and manage it.
 
@@ -29,6 +40,28 @@ The server will automatically connect to your current kubectl context. Make sure
 You can verify your connection by asking Claude to list your pods or create a test deployment.
 
 If you have errors open up a standard terminal and run `kubectl get pods` to see if you can connect to your cluster without credentials issues.
+
+## Usage with mcp-chat
+
+[mcp-chat](https://github.com/Flux159/mcp-chat) is a CLI chat client for MCP servers. You can use it to interact with the Kubernetes server.
+
+```shell
+npx mcp-chat --server "npx mcp-server-kubernetes"
+```
+
+Alternatively, pass it your existing Claude Desktop configuration file from above (Linux should pass the correct path to config):
+
+Mac:
+
+```shell
+npx mcp-chat --config "~/Library/Application Support/Claude/claude_desktop_config.json"
+```
+
+Windows:
+
+```shell
+npx mcp-chat --config "%APPDATA%\Claude\claude_desktop_config.json"
+```
 
 ## Features
 
@@ -85,8 +118,27 @@ bun run build
 4. Local Testing with [Inspector](https://github.com/modelcontextprotocol/inspector)
 
 ```bash
-npx @modelcontextprotocol/inspector node build/index.js
+npx @modelcontextprotocol/inspector node dist/index.js
 # Follow further instructions on terminal for Inspector link
+```
+
+5. Local testing with Claude Desktop
+
+```json
+{
+  "mcpServers": {
+    "mcp-server-kubernetes": {
+      "command": "node",
+      "args": ["/path/to/your/mcp-server-kubernetes/dist/index.js"]
+    }
+  }
+}
+```
+
+6. Local testing with [mcp-chat](https://github.com/Flux159/mcp-chat)
+
+```bash
+npm run chat
 ```
 
 ### Project Structure
@@ -95,28 +147,48 @@ npx @modelcontextprotocol/inspector node build/index.js
 ├── src/
 │   ├── index.ts              # Main server implementation
 │   ├── types.ts              # Type re-exports
-│   ├── config/              # Configuration files
+│   ├── config/               # Configuration files
 │   │   ├── container-templates.ts  # Container configurations
-│   │   ├── server-config.ts       # Server settings
+│   │   ├── server-config.ts        # Server settings
 │   │   ├── deployment-config.ts    # Deployment schemas
-│   │   └── ...
-│   ├── models/              # Data models and schemas
-│   │   ├── response-schemas.ts    # API response schemas
-│   │   ├── resource-models.ts     # Resource models
-│   │   └── tool-models.ts         # Tool schemas
-│   ├── utils/               # Utility classes
-│   │   └── kubernetes-manager.ts  # K8s management
-│   ├── resources/           # Resource handlers
-│   │   └── handlers.ts      # Resource implementation
-│   └── tools/              # Tool implementations
-│       ├── list_pods.ts
-│       ├── list_services.ts
-│       ├── list_deployments.ts
-│       └── ...
-├── tests/                  # Test files
-│   └── unit.test.ts        # Unit tests
-│   └── helm.test.ts        # Helm tests
-└── ...
+│   │   ├── namespace-config.ts     # Namespace schemas
+│   │   └── cleanup-config.ts       # Resource cleanup configuration
+│   ├── models/               # Data models and schemas
+│   │   ├── response-schemas.ts     # API response schemas
+│   │   ├── resource-models.ts      # Resource models
+│   │   ├── tool-models.ts          # Tool schemas
+│   │   ├── helm-models.ts          # Helm operation schemas
+│   │   └── kubectl-models.ts       # Kubectl operation schemas
+│   ├── utils/                # Utility classes
+│   │   └── kubernetes-manager.ts   # K8s management
+│   ├── resources/            # Resource handlers
+│   │   └── handlers.ts       # Resource implementation
+│   └── tools/                # Tool implementations
+│       ├── list_pods.ts      # Pod listing operations
+│       ├── list_services.ts  # Service listing operations
+│       ├── list_deployments.ts # Deployment listing operations
+│       ├── list_nodes.ts     # Node listing operations
+│       ├── create_pod.ts     # Pod creation operations
+│       ├── delete_pod.ts     # Pod deletion operations
+│       ├── describe_pod.ts   # Pod description operations
+│       ├── get_logs.ts       # Container logs operations
+│       ├── get_events.ts     # Kubernetes events operations
+│       ├── helm-operations.ts # Helm chart operations
+│       └── kubectl-operations.ts # Kubectl utility operations
+├── tests/                    # Test files
+│   ├── unit.test.ts          # Unit tests for basic operations
+│   ├── helm.test.ts          # Helm-specific tests
+│   └── kubectl.test.ts       # Kubectl-specific tests
+├── .github/                  # GitHub configuration
+│   └── workflows/            # CI/CD workflows
+│       ├── ci.yml            # Continuous integration
+│       └── cd.yml            # Continuous deployment
+├── Dockerfile                # Docker container definition
+├── LICENSE                   # MIT license
+├── README.md                 # Project documentation
+├── package.json              # NPM package configuration
+├── tsconfig.json             # TypeScript configuration
+└── vitest.config.ts          # Test configuration
 ```
 
 ### Contributing
