@@ -66,7 +66,7 @@ export const listApiResourcesSchema = {
   },
 };
 
-const executeKubectlCommand = (command: string): string => {
+export const executeKubectlCommand = (command: string): string => {
   try {
     return execSync(command, { encoding: "utf8" });
   } catch (error: any) {

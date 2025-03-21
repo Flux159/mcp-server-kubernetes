@@ -3,7 +3,9 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { KubectlResponseSchema } from "../src/models/kubectl-models.js";
 import { GetEventsResponseSchema } from "../src/models/response-schemas.js";
+import {PortForwardSchema} from "../src/tools/forward_port.js";
 import * as fs from "fs";
+import { executeKubectlCommand } from "../src/tools/kubectl-operations.js";
 
 async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
