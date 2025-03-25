@@ -4,10 +4,8 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { KubectlResponseSchema } from "../src/models/kubectl-models.js";
 import { GetEventsResponseSchema } from "../src/models/response-schemas.js";
 import {PortForwardSchema} from "../src/tools/forward_port.js";
-import * as fs from "fs";
-import { executeKubectlCommand } from "../src/tools/kubectl-operations.js";
-import { J } from "vitest/dist/chunks/reporters.nr4dxCkA.js";
-
+import {listPods} from "../src/tools/list_pods.js";
+import { KubernetesManager } from "../src/types.ts";
 async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -144,6 +142,8 @@ describe("kubectl operations", () => {
   });
 
   test("start_forwardport", async () => {
+    const k8sManager = new KubernetesManager();
+    const resourcename =  await listPods(k8sManager, { namespace: "default" });
     const result = await client.request(
       {
         method: "tools/call",
@@ -151,7 +151,7 @@ describe("kubectl operations", () => {
           name: "forward_port",
           arguments: {
             resourceType: "pod",
-            resourceName: "nginx-6799fc88d8-7v8qk",
+            resourceName: resourcename,
             localPort: 8080,
             targetPort: 80,
           },
