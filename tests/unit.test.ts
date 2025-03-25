@@ -371,7 +371,6 @@ describe("kubernetes server operations", () => {
         // Ignore any errors during termination check
         console.log(`Error checking pod termination status: ${error}`);
       }
-    },
     { timeout: 120000 }
-  );
+  });
 });
