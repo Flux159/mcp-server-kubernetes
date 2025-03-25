@@ -143,7 +143,9 @@ describe("kubectl operations", () => {
 
   test("start_forwardport", async () => {
     const k8sManager = new KubernetesManager();
-    const resourcename =  await listPods(k8sManager, { namespace: "default" });
+    const podsResponse = await listPods(k8sManager, { namespace: "default" });
+    const pods = JSON.parse(podsResponse.content[0].text).pods;
+    const resourcename = pods[0].name;
     const result = await client.request(
       {
         method: "tools/call",
