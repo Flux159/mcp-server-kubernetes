@@ -39,7 +39,6 @@
     "@modelcontextprotocol/sdk": "1.0.1",
     "express": "^4.21.2",
     "js-yaml": "^4.1.0",
-    "mcp-server-kubernetes": "file:",
     "yaml": "^2.7.0",
     "zod": "^3.24.2"
   },
