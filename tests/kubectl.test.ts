@@ -6,6 +6,7 @@ import { GetEventsResponseSchema } from "../src/models/response-schemas.js";
 import {PortForwardSchema} from "../src/tools/forward_port.js";
 import * as fs from "fs";
 import { executeKubectlCommand } from "../src/tools/kubectl-operations.js";
+import { J } from "vitest/dist/chunks/reporters.nr4dxCkA.js";
 
 async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -147,7 +148,7 @@ describe("kubectl operations", () => {
       {
         method: "tools/call",
         params: {
-          name: "start_forward_port",
+          name: "forward_port",
           arguments: {
             resourceType: "pod",
             resourceName: "nginx-6799fc88d8-7v8qk",
@@ -158,7 +159,8 @@ describe("kubectl operations", () => {
       },
       PortForwardSchema
     );
-    
+    expect(result.content[0].type).toBe("port-forward");
+    expect(result.content[0].resourceType).toBe("pod");
   });
 
 
