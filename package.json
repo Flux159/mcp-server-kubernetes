@@ -1,6 +1,6 @@
 {
   "name": "mcp-server-kubernetes",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "description": "MCP server for interacting with Kubernetes clusters via kubectl",
   "license": "MIT",
   "type": "module",
@@ -40,9 +40,11 @@
     "js-yaml": "^4.1.0",
     "mcp-server-kubernetes": "file:",
     "yaml": "^2.7.0",
-    "zod": "^3.24.2"
+    "zod": "^3.24.2",
+    "express": "4.21.2"
   },
   "devDependencies": {
+    "@types/express": "^5.0.1",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^22.9.3",
     "shx": "^0.3.4",

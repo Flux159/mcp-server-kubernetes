@@ -13,7 +13,10 @@ export const listPodsSchema = {
   },
 } as const;
 
-export async function listPods(k8sManager: KubernetesManager, input: { namespace?: string }) {
+export async function listPods(
+  k8sManager: KubernetesManager,
+  input: { namespace?: string }
+) {
   const namespace = input.namespace || "default";
   const { body } = await k8sManager.getCoreApi().listNamespacedPod(namespace);
 

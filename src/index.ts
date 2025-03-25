@@ -300,8 +300,12 @@ server.setRequestHandler(
   resourceHandlers.readResource
 );
 
-const transport = new StdioServerTransport();
-await server.connect(transport);
+if (process.env.ENABLE_UNSAFE_SSE_TRANSPORT) {
+  startSSEServer(server);
+} else {
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+}
 
 ["SIGINT", "SIGTERM"].forEach((signal) => {
   process.on(signal, async () => {

@@ -44,8 +44,8 @@ jobs:
 
       - name: Run tests and generate JUnit report
         run: |
-          # Run tests with JUnit reporter
-          bun run test --reporter junit > junit-results.xml
+          # Run tests with both default and JUnit reporters
+          bun run test --reporter default --reporter junit --outputFile junit-results.xml
 
       - name: Test Report
         uses: dorny/test-reporter@v2
