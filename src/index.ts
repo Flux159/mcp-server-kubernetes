@@ -43,6 +43,7 @@ import { createDeploymentSchema } from "./config/deployment-config.js";
 import { listNamespacesSchema } from "./config/namespace-config.js";
 import { cleanupSchema } from "./config/cleanup-config.js";
 import { startForwardPort,PortForwardSchema } from "./tools/forward_port.js";
+import { startSSEServer } from "./utils/sse.js";
 
 const k8sManager = new KubernetesManager();
 
