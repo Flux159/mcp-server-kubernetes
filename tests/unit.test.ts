@@ -106,6 +106,7 @@ describe("kubernetes server operations", () => {
       },
       ListToolsResponseSchema
     );
+    console.log(toolsList);
     expect(toolsList.tools).toBeDefined();
     expect(toolsList.tools.length).toBeGreaterThan(0);
   });

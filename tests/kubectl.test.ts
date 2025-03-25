@@ -48,7 +48,6 @@ describe("kubectl operations", () => {
       console.error("Error during cleanup:", e);
     }
   });
-
   test("explain resource", async () => {
     const result = await client.request(
       {
@@ -142,6 +141,26 @@ describe("kubectl operations", () => {
     expect(text).toContain("statefulsets");
     expect(text).toContain("daemonsets");
   });
+
+  test("port forward", async () => {
+    const result = await client.request(
+      {
+        method: "tools/call",
+        params: {
+          name: "start_forward_port",
+          arguments: {
+            resourceType: "pod",
+            resourceName: "nginx-6799fc88d8-7v8qk",
+            localPort: 8080,
+            targetPort: 80,
+          },
+        },
+      },
+      PortForwardSchema
+    );
+    
+  });
+
 
   /**
    * Test suite for get_events functionality
