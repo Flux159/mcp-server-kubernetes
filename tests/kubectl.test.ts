@@ -143,7 +143,7 @@ describe("kubectl operations", () => {
     expect(text).toContain("daemonsets");
   });
 
-  test("start_portforward", async () => {
+  test("start_forwardport", async () => {
     const result = await client.request(
       {
         method: "tools/call",
