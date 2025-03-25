@@ -1,3 +1,4 @@
+
 // Import required test frameworks and SDK components
 import {
   expect,
@@ -103,11 +104,9 @@ describe("kubernetes server operations", () => {
     const toolsList = await client.request(
       {
         method: "tools/list",
-        params: {},
       },
       ListToolsResponseSchema
     );
-    console.log(toolsList);
     expect(toolsList.tools).toBeDefined();
     expect(toolsList.tools.length).toBeGreaterThan(0);
   });
@@ -373,6 +372,7 @@ describe("kubernetes server operations", () => {
         // Ignore any errors during termination check
         console.log(`Error checking pod termination status: ${error}`);
       }
+    },
     { timeout: 120000 }
-  });
+  );
 });
