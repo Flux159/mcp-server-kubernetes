@@ -103,6 +103,7 @@ describe("kubernetes server operations", () => {
     const toolsList = await client.request(
       {
         method: "tools/list",
+        params: {},
       },
       ListToolsResponseSchema
     );
