@@ -266,7 +266,7 @@ server.setRequestHandler(
           );
         }
 
-        case "start_forwardport": {
+        case "forward_port": {
           return await startForwardPort(
             input as {
               resourceType: string;
