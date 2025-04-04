@@ -67,6 +67,7 @@ import {
   describeDeployment,
   describeDeploymentSchema,
 } from "./tools/describe_deployment.js";
+import {createConfigMap, CreateConfigMapSchema } from "./tools/create_configmap.js";
 
 const k8sManager = new KubernetesManager();
 
@@ -112,6 +113,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       StopPortForwardSchema,
       scaleDeploymentSchema,
       DeleteCronJobSchema,
+      CreateConfigMapSchema,
     ],
   };
 });
@@ -445,6 +447,17 @@ server.setRequestHandler(
               name : string,
               namespace : string,
              replicas : number
+            }
+          );
+        }
+
+        case "create_configmap" : {
+          return await createConfigMap(
+            k8sManager,
+            input as {
+              name : string,
+              namespace : string,
+              data : Record<string, string>
             }
           );
         }

@@ -108,3 +108,12 @@ export const DeleteCronJobResponseSchema = z.object({
     })
   ),
 });
+
+export const CreateConfigMapResponseSchema = z.object({
+  content: z.array(
+    z.object({
+      success: z.boolean(),
+      message: z.string(),
+    })
+  ),
+});
