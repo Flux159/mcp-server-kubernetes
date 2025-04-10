@@ -2,10 +2,7 @@ import { expect, test, describe, beforeAll, afterAll } from "vitest";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { startSSEServer } from "../src/utils/sse.js";
 import { listPods, listPodsSchema } from "../src/tools/list_pods.js";
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
+import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { KubernetesManager } from "../src/utils/kubernetes-manager.js";
 
 describe("SSE transport", () => {
@@ -89,24 +86,21 @@ describe("SSE transport", () => {
     expect(sessionId).toBeDefined();
 
     // Step 2: Make a tool call using the session ID
-    const toolCallResponse = await fetch(
-      `${serverUrl}/messages?sessionId=${sessionId}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+    const toolCallResponse = await fetch(`${serverUrl}/messages?sessionId=${sessionId}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1234,
+        method: "tools/call",
+        params: {
+          name: "list_pods",
+          namespace: "default",
         },
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          id: 1234,
-          method: "tools/call",
-          params: {
-            name: "list_pods",
-            namespace: "default",
-          },
-        }),
-      }
-    );
+      }),
+    });
 
     expect(toolCallResponse.status).toBe(202);
     expect(await toolCallResponse.text()).toBe("Accepted");

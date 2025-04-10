@@ -34,20 +34,14 @@ async function executeKubectlCommandAsync(
 
     process.on("close", (code) => {
       if (code !== 0) {
-        reject(
-          new Error(
-            `Port-forward process exited with code ${code}. Error: ${errorOutput}`
-          )
-        );
+        reject(new Error(`Port-forward process exited with code ${code}. Error: ${errorOutput}`));
       }
     });
 
     // Set a timeout to reject if we don't see the success message
     setTimeout(() => {
       if (!output.includes("Forwarding from")) {
-        reject(
-          new Error("port-forwarding failed - no success message received")
-        );
+        reject(new Error("port-forwarding failed - no success message received"));
       }
     }, 5000);
   });
@@ -95,10 +89,7 @@ export async function startPortForward(
           try {
             process.kill(result.pid);
           } catch (error) {
-            console.error(
-              `Failed to stop port-forward process ${result.pid}:`,
-              error
-            );
+            console.error(`Failed to stop port-forward process ${result.pid}:`, error);
           }
         },
       },
@@ -142,9 +133,7 @@ export async function stopPortForward(
     await portForward.server.stop();
     k8sManager.removePortForward(input.id);
     return {
-      content: [
-        { success: true, message: "port-forward stopped successfully" },
-      ],
+      content: [{ success: true, message: "port-forward stopped successfully" }],
     };
   } catch (error: any) {
     throw new Error(`Failed to stop port-forward: ${error.message}`);

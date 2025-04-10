@@ -22,7 +22,9 @@
     "test": "vitest run",
     "prepublishOnly": "npm run build",
     "dockerbuild": "docker buildx build -t flux159/mcp-server-kubernetes --platform linux/amd64,linux/arm64 --push .",
-    "chat": "npx mcp-chat --server \"./dist/index.js\""
+    "chat": "npx mcp-chat --server \"./dist/index.js\"",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\""
   },
   "keywords": [
     "mcp",
@@ -46,8 +48,10 @@
     "@types/express": "5.0.1",
     "@types/js-yaml": "4.0.9",
     "@types/node": "22.9.3",
+    "prettier": "^3.2.5",
     "shx": "0.3.4",
     "typescript": "5.6.2",
     "vitest": "2.1.9"
-  }
+  },
+  "packageManager": "bun@1.2.9"
 }

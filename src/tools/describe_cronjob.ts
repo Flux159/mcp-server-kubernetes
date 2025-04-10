@@ -2,8 +2,7 @@ import { KubernetesManager } from "../types.js";
 
 export const describeCronJobSchema = {
   name: "describe_cronjob",
-  description:
-    "Get detailed information about a Kubernetes CronJob including recent job history",
+  description: "Get detailed information about a Kubernetes CronJob including recent job history",
   inputSchema: {
     type: "object",
     properties: {
@@ -24,10 +23,7 @@ export async function describeCronJob(
   try {
     // Get the CronJob details
     const batchV1Api = k8sManager.getBatchApi();
-    const cronJobResponse = await batchV1Api.readNamespacedCronJob(
-      input.name,
-      input.namespace
-    );
+    const cronJobResponse = await batchV1Api.readNamespacedCronJob(input.name, input.namespace);
     const cronJob = cronJobResponse.body;
 
     // Get recent Jobs associated with this CronJob
@@ -76,14 +72,9 @@ export async function describeCronJob(
       creationTimestamp: cronJob.metadata?.creationTimestamp || "",
       recentJobs: recentJobs,
       jobTemplate: {
-        image:
-          cronJob.spec?.jobTemplate?.spec?.template?.spec?.containers?.[0]
-            ?.image || "",
-        command:
-          cronJob.spec?.jobTemplate?.spec?.template?.spec?.containers?.[0]
-            ?.command || [],
-        restartPolicy:
-          cronJob.spec?.jobTemplate?.spec?.template?.spec?.restartPolicy || "",
+        image: cronJob.spec?.jobTemplate?.spec?.template?.spec?.containers?.[0]?.image || "",
+        command: cronJob.spec?.jobTemplate?.spec?.template?.spec?.containers?.[0]?.command || [],
+        restartPolicy: cronJob.spec?.jobTemplate?.spec?.template?.spec?.restartPolicy || "",
       },
     };
 

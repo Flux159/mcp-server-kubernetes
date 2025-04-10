@@ -27,16 +27,9 @@ export class KubernetesManager {
     // Delete tracked resources in reverse order
     for (const resource of [...this.resources].reverse()) {
       try {
-        await this.deleteResource(
-          resource.kind,
-          resource.name,
-          resource.namespace
-        );
+        await this.deleteResource(resource.kind, resource.name, resource.namespace);
       } catch (error) {
-        console.error(
-          `Failed to delete ${resource.kind} ${resource.name}:`,
-          error
-        );
+        console.error(`Failed to delete ${resource.kind} ${resource.name}:`, error);
       }
     }
   }

@@ -15,15 +15,15 @@ export const describePodSchema = {
   },
 } as const;
 
-export async function describePod(k8sManager: KubernetesManager, input: {
-  name: string;
-  namespace: string;
-}) {
+export async function describePod(
+  k8sManager: KubernetesManager,
+  input: {
+    name: string;
+    namespace: string;
+  }
+) {
   try {
-    const { body } = await k8sManager.getCoreApi().readNamespacedPod(
-      input.name,
-      input.namespace
-    );
+    const { body } = await k8sManager.getCoreApi().readNamespacedPod(input.name, input.namespace);
 
     if (!body) {
       return {

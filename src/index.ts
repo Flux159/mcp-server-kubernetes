@@ -4,10 +4,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { listPods, listPodsSchema } from "./tools/list_pods.js";
 import { listNodes, listNodesSchema } from "./tools/list_nodes.js";
 import { listServices, listServicesSchema } from "./tools/list_services.js";
-import {
-  listDeployments,
-  listDeploymentsSchema,
-} from "./tools/list_deployments.js";
+import { listDeployments, listDeploymentsSchema } from "./tools/list_deployments.js";
 import { listCronJobs, listCronJobsSchema } from "./tools/list_cronjobs.js";
 import { describeCronJob, describeCronJobSchema } from "./tools/describe_cronjob.js";
 import { listJobs, listJobsSchema } from "./tools/list_jobs.js";
@@ -26,13 +23,10 @@ import {
   listApiResources,
   listApiResourcesSchema,
 } from "./tools/kubectl-operations.js";
-import {
-  createNamespace,
-  createNamespaceSchema,
-} from "./tools/create_namespace.js";
+import { createNamespace, createNamespaceSchema } from "./tools/create_namespace.js";
 import { createPod, createPodSchema } from "./tools/create_pod.js";
 import { createCronJob, createCronJobSchema } from "./tools/create_cronjob.js";
-import { DeleteCronJob,DeleteCronJobSchema} from "./tools/delete_cronjob.js";
+import { DeleteCronJob, DeleteCronJobSchema } from "./tools/delete_cronjob.js";
 import { deletePod, deletePodSchema } from "./tools/delete_pod.js";
 import { describePod, describePodSchema } from "./tools/describe_pod.js";
 import { getLogs, getLogsSchema } from "./tools/get_logs.js";
@@ -62,12 +56,9 @@ import {
 } from "./tools/port_forward.js";
 import { deleteDeployment, deleteDeploymentSchema } from "./tools/delete_deployment.js";
 import { createDeployment } from "./tools/create_deployment.js";
-import {scaleDeployment,scaleDeploymentSchema} from "./tools/scale_deployment.js"
-import {
-  describeDeployment,
-  describeDeploymentSchema,
-} from "./tools/describe_deployment.js";
-import {createConfigMap, CreateConfigMapSchema } from "./tools/create_configmap.js";
+import { scaleDeployment, scaleDeploymentSchema } from "./tools/scale_deployment.js";
+import { describeDeployment, describeDeploymentSchema } from "./tools/describe_deployment.js";
+import { createConfigMap, CreateConfigMapSchema } from "./tools/create_configmap.js";
 
 const k8sManager = new KubernetesManager();
 
@@ -181,12 +172,12 @@ server.setRequestHandler(
           );
         }
 
-        case "delete_cronjob" : {
+        case "delete_cronjob": {
           return await DeleteCronJob(
             k8sManager,
             input as {
-              name : string;
-              namespace : string
+              name: string;
+              namespace: string;
             }
           );
         }
@@ -274,10 +265,7 @@ server.setRequestHandler(
         }
 
         case "list_deployments": {
-          return await listDeployments(
-            k8sManager,
-            input as { namespace?: string }
-          );
+          return await listDeployments(k8sManager, input as { namespace?: string });
         }
 
         case "list_namespaces": {
@@ -308,17 +296,11 @@ server.setRequestHandler(
         }
 
         case "list_services": {
-          return await listServices(
-            k8sManager,
-            input as { namespace?: string }
-          );
+          return await listServices(k8sManager, input as { namespace?: string });
         }
 
         case "list_cronjobs": {
-          return await listCronJobs(
-            k8sManager,
-            input as { namespace?: string }
-          );
+          return await listCronJobs(k8sManager, input as { namespace?: string });
         }
 
         case "describe_cronjob": {
@@ -439,25 +421,25 @@ server.setRequestHandler(
             }
           );
         }
-        
-        case "scale_deployment" : {
+
+        case "scale_deployment": {
           return await scaleDeployment(
             k8sManager,
             input as {
-              name : string,
-              namespace : string,
-             replicas : number
+              name: string;
+              namespace: string;
+              replicas: number;
             }
           );
         }
 
-        case "create_configmap" : {
+        case "create_configmap": {
           return await createConfigMap(
             k8sManager,
             input as {
-              name : string,
-              namespace : string,
-              data : Record<string, string>
+              name: string;
+              namespace: string;
+              data: Record<string, string>;
             }
           );
         }
@@ -467,24 +449,15 @@ server.setRequestHandler(
       }
     } catch (error) {
       if (error instanceof McpError) throw error;
-      throw new McpError(
-        ErrorCode.InternalError,
-        `Tool execution failed: ${error}`
-      );
+      throw new McpError(ErrorCode.InternalError, `Tool execution failed: ${error}`);
     }
   }
 );
 
 // Resources handlers
 const resourceHandlers = getResourceHandlers(k8sManager);
-server.setRequestHandler(
-  ListResourcesRequestSchema,
-  resourceHandlers.listResources
-);
-server.setRequestHandler(
-  ReadResourceRequestSchema,
-  resourceHandlers.readResource
-);
+server.setRequestHandler(ListResourcesRequestSchema, resourceHandlers.listResources);
+server.setRequestHandler(ReadResourceRequestSchema, resourceHandlers.readResource);
 
 if (process.env.ENABLE_UNSAFE_SSE_TRANSPORT) {
   startSSEServer(server);

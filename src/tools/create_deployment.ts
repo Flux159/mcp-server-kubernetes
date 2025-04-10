@@ -126,9 +126,7 @@ export async function createDeployment(
   } else {
     containerConfig = {
       ...templateConfig,
-      ports:
-        input.ports?.map((port) => ({ containerPort: port })) ||
-        templateConfig.ports,
+      ports: input.ports?.map((port) => ({ containerPort: port })) || templateConfig.ports,
     };
   }
 

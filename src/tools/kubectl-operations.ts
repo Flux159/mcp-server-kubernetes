@@ -1,8 +1,5 @@
 import { execSync } from "child_process";
-import {
-  ExplainResourceParams,
-  ListApiResourcesParams,
-} from "../models/kubectl-models.js";
+import { ExplainResourceParams, ListApiResourcesParams } from "../models/kubectl-models.js";
 
 export const explainResourceSchema = {
   name: "explain_resource",
@@ -12,8 +9,7 @@ export const explainResourceSchema = {
     properties: {
       resource: {
         type: "string",
-        description:
-          "Resource name or field path (e.g. 'pods' or 'pods.spec.containers')",
+        description: "Resource name or field path (e.g. 'pods' or 'pods.spec.containers')",
       },
       apiVersion: {
         type: "string",

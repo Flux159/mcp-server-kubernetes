@@ -9,7 +9,8 @@ export const getEventsSchema = {
     properties: {
       namespace: {
         type: "string",
-        description: "Namespace to get events from. If not specified, gets events from all namespaces",
+        description:
+          "Namespace to get events from. If not specified, gets events from all namespaces",
       },
       fieldSelector: {
         type: "string",

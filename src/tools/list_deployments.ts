@@ -13,7 +13,10 @@ export const listDeploymentsSchema = {
   },
 } as const;
 
-export async function listDeployments(k8sManager: KubernetesManager, input: { namespace?: string }) {
+export async function listDeployments(
+  k8sManager: KubernetesManager,
+  input: { namespace?: string }
+) {
   const namespace = input.namespace || "default";
   const { body } = await k8sManager.getAppsApi().listNamespacedDeployment(namespace);
 

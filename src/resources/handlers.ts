@@ -65,9 +65,7 @@ export const getResourceHandlers = (k8sManager: KubernetesManager) => ({
 
       switch (resourceType) {
         case "pods": {
-          const { body } = await k8sManager
-            .getCoreApi()
-            .listNamespacedPod(namespace);
+          const { body } = await k8sManager.getCoreApi().listNamespacedPod(namespace);
           return {
             contents: [
               {
@@ -79,9 +77,7 @@ export const getResourceHandlers = (k8sManager: KubernetesManager) => ({
           };
         }
         case "deployments": {
-          const { body } = await k8sManager
-            .getAppsApi()
-            .listNamespacedDeployment(namespace);
+          const { body } = await k8sManager.getAppsApi().listNamespacedDeployment(namespace);
           return {
             contents: [
               {
@@ -93,9 +89,7 @@ export const getResourceHandlers = (k8sManager: KubernetesManager) => ({
           };
         }
         case "services": {
-          const { body } = await k8sManager
-            .getCoreApi()
-            .listNamespacedService(namespace);
+          const { body } = await k8sManager.getCoreApi().listNamespacedService(namespace);
           return {
             contents: [
               {
@@ -114,10 +108,7 @@ export const getResourceHandlers = (k8sManager: KubernetesManager) => ({
       }
     } catch (error) {
       if (error instanceof McpError) throw error;
-      throw new McpError(
-        ErrorCode.InternalError,
-        `Failed to read resource: ${error}`
-      );
+      throw new McpError(ErrorCode.InternalError, `Failed to read resource: ${error}`);
     }
   },
 });

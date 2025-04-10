@@ -143,9 +143,7 @@ describe("port-forward operations", () => {
     );
 
     expect(portForwardResult.content[0].success).toBe(true);
-    expect(portForwardResult.content[0].message).toBe(
-      "port-forwarding was successful"
-    );
+    expect(portForwardResult.content[0].message).toBe("port-forwarding was successful");
 
     // Wait a moment for the port-forward to establish
     await sleep(2000);
@@ -153,16 +151,13 @@ describe("port-forward operations", () => {
     // Test the connection using curl
     const curlResult = await new Promise((resolve, reject) => {
       const { exec } = require("child_process");
-      exec(
-        `curl -s http://localhost:${testPort}`,
-        (error: any, stdout: string) => {
-          if (error) {
-            reject(error);
-          } else {
-            resolve(stdout);
-          }
+      exec(`curl -s http://localhost:${testPort}`, (error: any, stdout: string) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(stdout);
         }
-      );
+      });
     });
 
     // Verify we got the nginx welcome page

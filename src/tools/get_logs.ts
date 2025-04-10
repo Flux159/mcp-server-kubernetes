@@ -3,8 +3,7 @@ import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 
 export const getLogsSchema = {
   name: "get_logs",
-  description:
-    "Get logs from pods, deployments, jobs, or resources matching a label selector",
+  description: "Get logs from pods, deployments, jobs, or resources matching a label selector",
   inputSchema: {
     type: "object",
     properties: {
@@ -29,8 +28,7 @@ export const getLogsSchema = {
       },
       container: {
         type: "string",
-        description:
-          "Container name (required when pod has multiple containers)",
+        description: "Container name (required when pod has multiple containers)",
         optional: true,
       },
       tail: {
@@ -96,25 +94,26 @@ async function getPodLogs(
     });
     throw new McpError(
       ErrorCode.InternalError,
-      `Failed to get logs for pod ${podName}: ${
-        error.response?.body?.message || error.message
-      }`
+      `Failed to get logs for pod ${podName}: ${error.response?.body?.message || error.message}`
     );
   }
 }
 
-export async function getLogs(k8sManager: KubernetesManager, input: {
-  resourceType: string;
-  name?: string;
-  namespace?: string;
-  labelSelector?: string;
-  container?: string;
-  tail?: number;
-  sinceSeconds?: number;
-  timestamps?: boolean;
-  pretty?: boolean;
-  follow?: false;
-}) {
+export async function getLogs(
+  k8sManager: KubernetesManager,
+  input: {
+    resourceType: string;
+    name?: string;
+    namespace?: string;
+    labelSelector?: string;
+    container?: string;
+    tail?: number;
+    sinceSeconds?: number;
+    timestamps?: boolean;
+    pretty?: boolean;
+    follow?: false;
+  }
+) {
   const namespace = input.namespace || "default";
   const logs: { [key: string]: string } = {};
 
@@ -143,10 +142,7 @@ export async function getLogs(k8sManager: KubernetesManager, input: {
           .getAppsApi()
           .readNamespacedDeployment(input.name, namespace);
         if (!deployment.spec?.selector?.matchLabels) {
-          throw new McpError(
-            ErrorCode.InvalidRequest,
-            `Deployment ${input.name} has no selector`
-          );
+          throw new McpError(ErrorCode.InvalidRequest, `Deployment ${input.name} has no selector`);
         }
 
         const selector = Object.entries(deployment.spec.selector.matchLabels)
@@ -155,14 +151,7 @@ export async function getLogs(k8sManager: KubernetesManager, input: {
 
         const { body: podList } = await k8sManager
           .getCoreApi()
-          .listNamespacedPod(
-            namespace,
-            undefined,
-            undefined,
-            undefined,
-            undefined,
-            selector
-          );
+          .listNamespacedPod(namespace, undefined, undefined, undefined, undefined, selector);
 
         for (const pod of podList.items) {
           if (pod.metadata?.name) {
@@ -250,9 +239,6 @@ export async function getLogs(k8sManager: KubernetesManager, input: {
     };
   } catch (error) {
     if (error instanceof McpError) throw error;
-    throw new McpError(
-      ErrorCode.InternalError,
-      `Failed to get logs: ${error}`
-    );
+    throw new McpError(ErrorCode.InternalError, `Failed to get logs: ${error}`);
   }
 }

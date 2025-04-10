@@ -176,9 +176,7 @@ describe("kubernetes server operations", () => {
 
       const podsResponse = JSON.parse(existingPods.content[0].text);
       const existingTestPods =
-        podsResponse.items?.filter((pod: any) =>
-          pod.metadata?.name?.startsWith(podBaseName)
-        ) || [];
+        podsResponse.items?.filter((pod: any) => pod.metadata?.name?.startsWith(podBaseName)) || [];
 
       // Terminate existing test pods if found
       for (const pod of existingTestPods) {
@@ -234,11 +232,7 @@ describe("kubernetes server operations", () => {
               name: podName,
               namespace: "default",
               template: "busybox",
-              command: [
-                "/bin/sh",
-                "-c",
-                "echo Pod is running && sleep infinity",
-              ],
+              command: ["/bin/sh", "-c", "echo Pod is running && sleep infinity"],
             },
           },
         },
@@ -541,9 +535,7 @@ describe("kubernetes server operations", () => {
         );
 
         expect(createDeploymentResult.content[0].type).toBe("text");
-        const createResponse = JSON.parse(
-          createDeploymentResult.content[0].text
-        );
+        const createResponse = JSON.parse(createDeploymentResult.content[0].text);
         expect(createResponse.status).toBe("created");
 
         // Wait for deployment to be ready
@@ -564,9 +556,7 @@ describe("kubernetes server operations", () => {
         );
 
         const deployments = JSON.parse(listDeploymentsResult.content[0].text);
-        expect(
-          deployments.deployments.some((d: any) => d.name === deploymentName)
-        ).toBe(true);
+        expect(deployments.deployments.some((d: any) => d.name === deploymentName)).toBe(true);
 
         const scaleDeploymentResult = await client.request(
           {
@@ -609,9 +599,7 @@ describe("kubernetes server operations", () => {
       } catch (e) {
         attempts++;
         if (attempts === maxAttempts) {
-          throw new Error(
-            `Failed after ${maxAttempts} attempts. Last error: ${e.message}`
-          );
+          throw new Error(`Failed after ${maxAttempts} attempts. Last error: ${e.message}`);
         }
         await sleep(waitTime);
       }

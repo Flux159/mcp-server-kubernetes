@@ -191,9 +191,7 @@ describe("kubernetes cronjob operations", () => {
       expect(cronJobs.cronjobs).toBeDefined();
 
       // Find our CronJob in the list
-      const createdCronJob = cronJobs.cronjobs.find(
-        (cj: any) => cj.name === cronJobName
-      );
+      const createdCronJob = cronJobs.cronjobs.find((cj: any) => cj.name === cronJobName);
       expect(createdCronJob).toBeDefined();
       expect(createdCronJob.schedule).toBe("*/5 * * * *");
       expect(createdCronJob.suspend).toBe(true);
@@ -245,22 +243,23 @@ describe("kubernetes cronjob operations", () => {
 
       const deletecronjobresult = await client.request(
         {
-          method : "tools/call",
-          params : {
-            name : "delete_cronjob",
-            arguments  : {
-              name : cronJobName,
-              namespace : testNamespace,
+          method: "tools/call",
+          params: {
+            name: "delete_cronjob",
+            arguments: {
+              name: cronJobName,
+              namespace: testNamespace,
             },
           },
         },
         DeleteCronJobResponseSchema
       );
 
-      expect(deletecronjobresult.content[0].success).toBe(true)
-      expect(deletecronjobresult.content[0].message).toContain(`Deleted cronjob ${cronJobName} in namespace ${testNamespace}.`)
+      expect(deletecronjobresult.content[0].success).toBe(true);
+      expect(deletecronjobresult.content[0].message).toContain(
+        `Deleted cronjob ${cronJobName} in namespace ${testNamespace}.`
+      );
 
-      
       // No need to test get_job_logs since we don't have any jobs in this controlled test
 
       // We should rely on the cleanup in afterEach to remove all resources

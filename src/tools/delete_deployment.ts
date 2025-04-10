@@ -23,9 +23,7 @@ export async function deleteDeployment(
   }
 ) {
   try {
-    await k8sManager
-      .getAppsApi()
-      .deleteNamespacedDeployment(input.name, input.namespace);
+    await k8sManager.getAppsApi().deleteNamespacedDeployment(input.name, input.namespace);
     return {
       content: [
         {

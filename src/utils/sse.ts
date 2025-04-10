@@ -16,16 +16,12 @@ export function startSSEServer(server: Server) {
   });
 
   app.post("/messages", (req, res) => {
-    const transport = transports.find(
-      (t) => t.sessionId === req.query.sessionId
-    );
+    const transport = transports.find((t) => t.sessionId === req.query.sessionId);
 
     if (transport) {
       transport.handlePostMessage(req, res);
     } else {
-      res
-        .status(404)
-        .send("Not found. Must pass valid sessionId as query param.");
+      res.status(404).send("Not found. Must pass valid sessionId as query param.");
     }
   });
 

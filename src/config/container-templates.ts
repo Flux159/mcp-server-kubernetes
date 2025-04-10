@@ -2,13 +2,7 @@ import { z } from "zod";
 import * as k8s from "@kubernetes/client-node";
 
 // Container template types
-export const ContainerTemplate = z.enum([
-  "ubuntu",
-  "nginx",
-  "busybox",
-  "alpine",
-  "custom",
-]);
+export const ContainerTemplate = z.enum(["ubuntu", "nginx", "busybox", "alpine", "custom"]);
 
 export type ContainerTemplateName = z.infer<typeof ContainerTemplate>;
 

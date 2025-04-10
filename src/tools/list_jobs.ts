@@ -3,8 +3,7 @@ import * as k8s from "@kubernetes/client-node";
 
 export const listJobsSchema = {
   name: "list_jobs",
-  description:
-    "List Jobs in a namespace, optionally filtered by a CronJob parent",
+  description: "List Jobs in a namespace, optionally filtered by a CronJob parent",
   inputSchema: {
     type: "object",
     properties: {

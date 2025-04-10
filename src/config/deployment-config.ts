@@ -1,7 +1,4 @@
-import {
-  ContainerTemplate,
-  CustomContainerConfig,
-} from "./container-templates.js";
+import { ContainerTemplate, CustomContainerConfig } from "./container-templates.js";
 
 export const createDeploymentSchema = {
   name: "create_deployment",

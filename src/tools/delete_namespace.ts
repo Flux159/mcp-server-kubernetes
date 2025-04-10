@@ -13,10 +13,13 @@ export const deleteNamespaceSchema = {
   },
 } as const;
 
-export async function deleteNamespace(k8sManager: KubernetesManager, input: {
-  name: string;
-  ignoreNotFound?: boolean;
-}) {
+export async function deleteNamespace(
+  k8sManager: KubernetesManager,
+  input: {
+    name: string;
+    ignoreNotFound?: boolean;
+  }
+) {
   try {
     await k8sManager.getCoreApi().deleteNamespace(input.name);
     return {

@@ -13,15 +13,12 @@ export const listCronJobsSchema = {
   },
 } as const;
 
-export async function listCronJobs(
-  k8sManager: KubernetesManager,
-  input: { namespace?: string }
-) {
+export async function listCronJobs(k8sManager: KubernetesManager, input: { namespace?: string }) {
   const namespace = input.namespace || "default";
-  
+
   // Get BatchV1Api from KubernetesManager
   const batchV1Api = k8sManager.getBatchApi();
-  
+
   // List cronjobs in the specified namespace
   const { body } = await batchV1Api.listNamespacedCronJob(namespace);
 

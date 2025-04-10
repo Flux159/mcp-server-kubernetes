@@ -14,11 +14,14 @@ export const deletePodSchema = {
   },
 } as const;
 
-export async function deletePod(k8sManager: KubernetesManager, input: {
-  name: string;
-  namespace: string;
-  ignoreNotFound?: boolean;
-}) {
+export async function deletePod(
+  k8sManager: KubernetesManager,
+  input: {
+    name: string;
+    namespace: string;
+    ignoreNotFound?: boolean;
+  }
+) {
   try {
     await k8sManager.getCoreApi().deleteNamespacedPod(input.name, input.namespace);
     return {

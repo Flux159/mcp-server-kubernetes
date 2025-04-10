@@ -1,7 +1,10 @@
 import { expect, test, describe, beforeEach, afterEach } from "vitest";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { CreateNamespaceResponseSchema, DeleteNamespaceResponseSchema } from "../src/models/response-schemas";
+import {
+  CreateNamespaceResponseSchema,
+  DeleteNamespaceResponseSchema,
+} from "../src/models/response-schemas";
 import { KubernetesManager } from "../src/utils/kubernetes-manager.js";
 
 async function sleep(ms: number): Promise<void> {
@@ -127,7 +130,7 @@ describe("kubernetes server operations", () => {
           },
         },
       },
-      DeleteNamespaceResponseSchema,
+      DeleteNamespaceResponseSchema
     );
     expect(result2).toEqual({
       content: [
@@ -141,9 +144,9 @@ describe("kubernetes server operations", () => {
             null,
             2
           ),
-        }
-      ]
-    })
+        },
+      ],
+    });
 
     // verify namespace is deleted
     const namespace = await k8sManager.getCoreApi().readNamespace(TEST_NAMESPACE_NAME);
@@ -152,5 +155,5 @@ describe("kubernetes server operations", () => {
     } else {
       expect(namespace.body).toBeUndefined();
     }
-  })
+  });
 });
