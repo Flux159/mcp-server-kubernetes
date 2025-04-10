@@ -18,6 +18,29 @@ export class KubernetesManager {
     this.k8sBatchApi = this.kc.makeApiClient(k8s.BatchV1Api);
   }
 
+  /**
+   * Set the current context to the past context name.
+   * 
+   * @param contextName 
+   */
+  public setCurrentContext(contextName: string) {
+
+
+    // Get all available contexts
+    const contexts = this.kc.getContexts();
+    const contextNames = contexts.map(context => context.name);
+
+    // Check if the requested context exists
+    if (!contextNames.includes(contextName)) {
+      throw new Error(`Context '${contextName}' not found. Available contexts: ${contextNames.join(', ')}`);
+    }
+    // Set the current context
+    this.kc.setCurrentContext(contextName);
+    this.k8sApi = this.kc.makeApiClient(k8s.CoreV1Api);
+    this.k8sAppsApi = this.kc.makeApiClient(k8s.AppsV1Api);
+    this.k8sBatchApi = this.kc.makeApiClient(k8s.BatchV1Api);
+  }
+
   async cleanup() {
     // Stop watches
     for (const watch of this.watches) {

@@ -32,7 +32,7 @@ import {
 } from "./tools/create_namespace.js";
 import { createPod, createPodSchema } from "./tools/create_pod.js";
 import { createCronJob, createCronJobSchema } from "./tools/create_cronjob.js";
-import { DeleteCronJob,DeleteCronJobSchema} from "./tools/delete_cronjob.js";
+import { DeleteCronJob, DeleteCronJobSchema } from "./tools/delete_cronjob.js";
 import { deletePod, deletePodSchema } from "./tools/delete_pod.js";
 import { describePod, describePodSchema } from "./tools/describe_pod.js";
 import { getLogs, getLogsSchema } from "./tools/get_logs.js";
@@ -62,12 +62,18 @@ import {
 } from "./tools/port_forward.js";
 import { deleteDeployment, deleteDeploymentSchema } from "./tools/delete_deployment.js";
 import { createDeployment } from "./tools/create_deployment.js";
-import {scaleDeployment,scaleDeploymentSchema} from "./tools/scale_deployment.js"
+import { scaleDeployment, scaleDeploymentSchema } from "./tools/scale_deployment.js"
 import {
   describeDeployment,
   describeDeploymentSchema,
 } from "./tools/describe_deployment.js";
-import {createConfigMap, CreateConfigMapSchema } from "./tools/create_configmap.js";
+import { createConfigMap, CreateConfigMapSchema } from "./tools/create_configmap.js";
+import { listContexts, listContextsSchema } from "./tools/list_contexts.js";
+import { getCurrentContext, getCurrentContextSchema } from "./tools/get_current_context.js";
+import { setCurrentContext, setCurrentContextSchema } from "./tools/set_current_context.js";
+
+// Check if non-destructive tools only mode is enabled
+const nonDestructiveTools = process.env.ALLOW_ONLY_NON_DESCTRUCTIVE_TOOLS === 'true';
 
 const k8sManager = new KubernetesManager();
 
@@ -79,43 +85,62 @@ const server = new Server(
   serverConfig
 );
 
+// Define destructive tools (delete and uninstall operations)
+const destructiveTools = [
+  deletePodSchema,
+  deleteDeploymentSchema,
+  deleteNamespaceSchema,
+  uninstallHelmChartSchema,
+  DeleteCronJobSchema,
+  cleanupSchema, // Cleanup is also destructive as it deletes resources
+];
+
 // Tools handlers
 server.setRequestHandler(ListToolsRequestSchema, async () => {
-  return {
-    tools: [
-      cleanupSchema,
-      createDeploymentSchema,
-      createNamespaceSchema,
-      createPodSchema,
-      createCronJobSchema,
-      deletePodSchema,
-      deleteDeploymentSchema,
-      deleteNamespaceSchema,
-      describeCronJobSchema,
-      describePodSchema,
-      describeDeploymentSchema,
-      explainResourceSchema,
-      getEventsSchema,
-      getJobLogsSchema,
-      getLogsSchema,
-      installHelmChartSchema,
-      listApiResourcesSchema,
-      listCronJobsSchema,
-      listDeploymentsSchema,
-      listJobsSchema,
-      listNamespacesSchema,
-      listNodesSchema,
-      listPodsSchema,
-      listServicesSchema,
-      uninstallHelmChartSchema,
-      upgradeHelmChartSchema,
-      PortForwardSchema,
-      StopPortForwardSchema,
-      scaleDeploymentSchema,
-      DeleteCronJobSchema,
-      CreateConfigMapSchema,
-    ],
-  };
+  // Get all available tools
+  const allTools = [
+    cleanupSchema,
+    createDeploymentSchema,
+    createNamespaceSchema,
+    createPodSchema,
+    createCronJobSchema,
+    deletePodSchema,
+    deleteDeploymentSchema,
+    deleteNamespaceSchema,
+    describeCronJobSchema,
+    describePodSchema,
+    describeDeploymentSchema,
+    explainResourceSchema,
+    getEventsSchema,
+    getJobLogsSchema,
+    getLogsSchema,
+    installHelmChartSchema,
+    listApiResourcesSchema,
+    listCronJobsSchema,
+    listContextsSchema,
+    getCurrentContextSchema,
+    setCurrentContextSchema,
+    listDeploymentsSchema,
+    listJobsSchema,
+    listNamespacesSchema,
+    listNodesSchema,
+    listPodsSchema,
+    listServicesSchema,
+    uninstallHelmChartSchema,
+    upgradeHelmChartSchema,
+    PortForwardSchema,
+    StopPortForwardSchema,
+    scaleDeploymentSchema,
+    DeleteCronJobSchema,
+    CreateConfigMapSchema,
+  ];
+
+  // Filter out destructive tools if ALLOW_ONLY_NON_DESCTRUCTIVE_TOOLS is set to 'true'
+  const tools = nonDestructiveTools
+    ? allTools.filter(tool => !destructiveTools.some(dt => dt.name === tool.name))
+    : allTools;
+
+  return { tools };
 });
 
 server.setRequestHandler(
@@ -181,12 +206,12 @@ server.setRequestHandler(
           );
         }
 
-        case "delete_cronjob" : {
+        case "delete_cronjob": {
           return await DeleteCronJob(
             k8sManager,
             input as {
-              name : string;
-              namespace : string
+              name: string;
+              namespace: string
             }
           );
         }
@@ -321,6 +346,27 @@ server.setRequestHandler(
           );
         }
 
+        case "list_contexts": {
+          return await listContexts(
+            k8sManager,
+            input as { showCurrent?: boolean }
+          );
+        }
+
+        case "get_current_context": {
+          return await getCurrentContext(
+            k8sManager,
+            input as { detailed?: boolean }
+          );
+        }
+
+        case "set_current_context": {
+          return await setCurrentContext(
+            k8sManager,
+            input as { name: string }
+          );
+        }
+
         case "describe_cronjob": {
           return await describeCronJob(
             k8sManager,
@@ -439,25 +485,25 @@ server.setRequestHandler(
             }
           );
         }
-        
-        case "scale_deployment" : {
+
+        case "scale_deployment": {
           return await scaleDeployment(
             k8sManager,
             input as {
-              name : string,
-              namespace : string,
-             replicas : number
+              name: string,
+              namespace: string,
+              replicas: number
             }
           );
         }
 
-        case "create_configmap" : {
+        case "create_configmap": {
           return await createConfigMap(
             k8sManager,
             input as {
-              name : string,
-              namespace : string,
-              data : Record<string, string>
+              name: string,
+              namespace: string,
+              data: Record<string, string>
             }
           );
         }

@@ -117,3 +117,14 @@ export const CreateConfigMapResponseSchema = z.object({
     })
   ),
 });
+
+export const ListContextsResponseSchema = z.object({
+  content: z.array(ToolResponseContent),
+});
+
+export const GetCurrentContextResponseSchema = z.object({
+  content: z.array(ToolResponseContent),
+});
+export const SetCurrentContextResponseSchema = z.object({
+  content: z.array(ToolResponseContent),
+});
