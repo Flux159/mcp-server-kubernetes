@@ -68,6 +68,7 @@ import {
   describeDeploymentSchema,
 } from "./tools/describe_deployment.js";
 import {createConfigMap, CreateConfigMapSchema } from "./tools/create_configmap.js";
+import { updateDeployment, updateDeploymentSchema } from "./tools/update_deployment.js";
 
 const k8sManager = new KubernetesManager();
 
@@ -107,6 +108,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       listNodesSchema,
       listPodsSchema,
       listServicesSchema,
+      updateDeploymentSchema,
       uninstallHelmChartSchema,
       upgradeHelmChartSchema,
       PortForwardSchema,
@@ -429,7 +431,19 @@ server.setRequestHandler(
             }
           );
         }
-
+        case "update_deployment": {
+          return await updateDeployment(
+            k8sManager,
+            input as {
+              name: string;
+              namespace: string;
+              template: string;
+              containerName?: string;
+              replicas?: number;
+              customConfig?: any;
+            }
+          );
+        }
         case "describe_deployment": {
           return await describeDeployment(
             k8sManager,
@@ -446,7 +460,7 @@ server.setRequestHandler(
             input as {
               name : string,
               namespace : string,
-             replicas : number
+              replicas : number
             }
           );
         }
