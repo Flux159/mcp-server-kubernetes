@@ -73,6 +73,7 @@ import { createService, createServiceSchema } from "./tools/create_service.js";
 import { listContexts, listContextsSchema } from "./tools/list_contexts.js";
 import { getCurrentContext, getCurrentContextSchema } from "./tools/get_current_context.js";
 import { setCurrentContext, setCurrentContextSchema } from "./tools/set_current_context.js";
+import { createLightHouseInstance, createLightHouseInstanceSchema } from "./tools/lighthouse_operations.js";
 
 // Check if non-destructive tools only mode is enabled
 const nonDestructiveTools = process.env.ALLOW_ONLY_NON_DESTRUCTIVE_TOOLS === 'true';
@@ -137,6 +138,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
     scaleDeploymentSchema,
     DeleteCronJobSchema,
     CreateConfigMapSchema,
+    createLightHouseInstanceSchema
   ];
 
   // Filter out destructive tools if ALLOW_ONLY_NON_DESTRUCTIVE_TOOLS is set to 'true'
@@ -287,6 +289,19 @@ server.setRequestHandler(
               repo: string;
               namespace: string;
               values?: Record<string, any>;
+            }
+          );
+        }
+
+        case "create_lighthouse_instance": {
+          return await createLightHouseInstance(
+            input as {
+              requester: string;
+              version: string;
+              size: string;
+              gpu: boolean;
+              intention_type: string;
+              expiration_date: string;
             }
           );
         }

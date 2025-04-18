@@ -2,6 +2,7 @@ import { execSync } from "child_process";
 import { writeFileSync, unlinkSync } from "fs";
 import yaml from "yaml";
 import { HelmInstallOperation, HelmOperation, HelmResponse, HelmUpgradeOperation } from "../models/helm-models.js";
+import { join } from "path";
 
 export const installHelmChartSchema = {
   name: "install_helm_chart",
@@ -101,7 +102,7 @@ const executeHelmCommand = (command: string): string => {
 };
 
 const writeValuesFile = (name: string, values: Record<string, any>): string => {
-  const filename = `${name}-values.yaml`;
+  const filename = join("/Users/kartik/core-infra-utils", `${name}-values.yaml`);
   writeFileSync(filename, yaml.stringify(values));
   return filename;
 };
@@ -111,12 +112,12 @@ export async function installHelmChart(params: HelmInstallOperation): Promise<{ 
     // Add helm repository if provided
     if (params.repo) {
       const repoName = params.chart.split("/")[0];
-      executeHelmCommand(`helm repo add ${repoName} ${params.repo}`);
-      executeHelmCommand("helm repo update");
+      //executeHelmCommand(`helm repo add ${repoName} ${params.repo}`);
+      //executeHelmCommand("helm repo update");
     }
 
-    let command = `helm install ${params.name} ${params.chart} --namespace ${params.namespace} --create-namespace`;
-
+    // let command = `helm install ${params.name} ${params.repo}/${params.chart} --namespace ${params.namespace} --create-namespace`;
+    let command = `helm install ${params.name} ${params.repo}/${params.chart} --namespace ${params.namespace} --set projectName=${params.namespace} --take-ownership`;  
     // Handle values if provided
     if (params.values) {
       const valuesFile = writeValuesFile(params.name, params.values);
