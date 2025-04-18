@@ -49,6 +49,44 @@ export const createLightHouseInstanceSchema = {
       required: ["requester", "version", "size", "intention_type", "expiration_date"],
     },
   };
+
+  export const getLightHouseDemoInstanceSchema = {
+    name: "get_lighthouse_demo_instance",
+    description: "Get all demo instances from Lighthouse",
+    inputSchema: {
+      type: "object",
+      properties: {
+        owner: {
+          type: "string",
+          description: "Owner of the instance",
+        },
+      },
+      //required: ["owner"],
+    },
+  };
+
+  export async function getLightHouseDemoInstance(params: { owner: string }): Promise<{ content: { type: string; text: string }[] }> {
+    try {
+      const URL = "http://lighthouse-api.g498.io/instances/view";
+      const response = await axios.get(`${URL}?owner=${params.owner}`, { headers });
+      
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              status: "success",
+              message: "Successfully retrieved instances",
+              data: response.data
+            }, null, 2),
+          },
+        ],
+      };
+    } catch (error: any) {
+      throw new Error(`Failed to get instances: ${error.response?.data || error.message}`);
+    }
+  }
+  
   
   export async function createLightHouseInstance(params: typeof payload): Promise<{ content: { type: string; text: string }[] }> {
     try {
