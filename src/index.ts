@@ -112,16 +112,6 @@ import { deleteService, deleteServiceSchema } from "./tools/delete_service.js";
 const nonDestructiveTools =
   process.env.ALLOW_ONLY_NON_DESTRUCTIVE_TOOLS === "true";
 
-const k8sManager = new KubernetesManager();
-
-const server = new Server(
-  {
-    name: serverConfig.name,
-    version: serverConfig.version,
-  },
-  serverConfig
-);
-
 // Define destructive tools (delete and uninstall operations)
 const destructiveTools = [
   deletePodSchema,
@@ -133,54 +123,62 @@ const destructiveTools = [
   cleanupSchema, // Cleanup is also destructive as it deletes resources
 ];
 
+// Get all available tools
+const allTools = [
+  cleanupSchema,
+  createDeploymentSchema,
+  createNamespaceSchema,
+  createPodSchema,
+  createCronJobSchema,
+  createServiceSchema,
+  deletePodSchema,
+  deleteDeploymentSchema,
+  deleteNamespaceSchema,
+  deleteServiceSchema,
+  describeCronJobSchema,
+  describePodSchema,
+  describeNodeSchema,
+  describeDeploymentSchema,
+  describeServiceSchema,
+  explainResourceSchema,
+  getEventsSchema,
+  getJobLogsSchema,
+  getLogsSchema,
+  installHelmChartSchema,
+  listApiResourcesSchema,
+  listCronJobsSchema,
+  listContextsSchema,
+  getCurrentContextSchema,
+  setCurrentContextSchema,
+  listDeploymentsSchema,
+  listJobsSchema,
+  listNamespacesSchema,
+  listNodesSchema,
+  listPodsSchema,
+  listServicesSchema,
+  uninstallHelmChartSchema,
+  updateDeploymentSchema,
+  upgradeHelmChartSchema,
+  PortForwardSchema,
+  StopPortForwardSchema,
+  scaleDeploymentSchema,
+  DeleteCronJobSchema,
+  CreateConfigMapSchema,
+  updateServiceSchema,
+];
+
+const k8sManager = new KubernetesManager();
+
+const server = new Server(
+  {
+    name: serverConfig.name,
+    version: serverConfig.version,
+  },
+  serverConfig
+);
+
 // Tools handlers
 server.setRequestHandler(ListToolsRequestSchema, async () => {
-  // Get all available tools
-  const allTools = [
-    cleanupSchema,
-    createDeploymentSchema,
-    createNamespaceSchema,
-    createPodSchema,
-    createCronJobSchema,
-    createServiceSchema,
-    deletePodSchema,
-    deleteDeploymentSchema,
-    deleteNamespaceSchema,
-    deleteServiceSchema,
-    describeCronJobSchema,
-    describePodSchema,
-    describeNodeSchema,
-    describeDeploymentSchema,
-    describeServiceSchema,
-    explainResourceSchema,
-    getEventsSchema,
-    getJobLogsSchema,
-    getLogsSchema,
-    installHelmChartSchema,
-    listApiResourcesSchema,
-    listCronJobsSchema,
-    listContextsSchema,
-    getCurrentContextSchema,
-    setCurrentContextSchema,
-    listDeploymentsSchema,
-    listJobsSchema,
-    listNamespacesSchema,
-    listNodesSchema,
-    listPodsSchema,
-    listServicesSchema,
-    uninstallHelmChartSchema,
-    updateDeploymentSchema,
-    upgradeHelmChartSchema,
-    PortForwardSchema,
-    StopPortForwardSchema,
-    scaleDeploymentSchema,
-    DeleteCronJobSchema,
-    CreateConfigMapSchema,
-    updateServiceSchema,
-    GetConfigMapSchema,
-    UpdateConfigMapSchema,
-    DeleteConfigMapSchema,
-  ];
 
   // Filter out destructive tools if ALLOW_ONLY_NON_DESTRUCTIVE_TOOLS is set to 'true'
   const tools = nonDestructiveTools
@@ -704,3 +702,5 @@ if (process.env.ENABLE_UNSAFE_SSE_TRANSPORT) {
     process.exit(0);
   });
 });
+
+export { allTools, destructiveTools };
