@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/flux159-mcp-server-kubernetes-badge.png)](https://mseep.ai/app/flux159-mcp-server-kubernetes)
+
 # MCP Server Kubernetes
 
 [![CI](https://github.com/Flux159/mcp-server-kubernetes/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/mcp-server-kubernetes/actions/workflows/ci.yml)
