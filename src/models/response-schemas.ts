@@ -160,3 +160,7 @@ export const SetCurrentContextResponseSchema = z.object({
 export const DescribeNodeResponseSchema = z.object({
   content: z.array(ToolResponseContent),
 });
+
+export const ExecInPodResponseSchema = z.object({
+  content: z.array(ToolResponseContent),
+});

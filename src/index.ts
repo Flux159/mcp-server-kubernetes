@@ -41,6 +41,7 @@ import { deletePod, deletePodSchema } from "./tools/delete_pod.js";
 import { describePod, describePodSchema } from "./tools/describe_pod.js";
 import { getLogs, getLogsSchema } from "./tools/get_logs.js";
 import { getEvents, getEventsSchema } from "./tools/get_events.js";
+import { execInPod, execInPodSchema } from "./tools/exec_in_pod.js";
 import { getResourceHandlers } from "./resources/handlers.js";
 import {
   ListResourcesRequestSchema,
@@ -165,6 +166,7 @@ const allTools = [
   DeleteCronJobSchema,
   CreateConfigMapSchema,
   updateServiceSchema,
+  execInPodSchema,
 ];
 
 const k8sManager = new KubernetesManager();
@@ -660,6 +662,18 @@ server.setRequestHandler(
             input as {
               name: string;
               namespace?: string;
+            }
+          );
+        }
+
+        case "exec_in_pod": {
+          return await execInPod(
+            k8sManager,
+            input as {
+              name: string;
+              namespace?: string;
+              command: string | string[];
+              container?: string;
             }
           );
         }
