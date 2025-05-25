@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+
 import {
   installHelmChart,
   installHelmChartSchema,
@@ -29,6 +30,15 @@ import { KubernetesManager } from "./types.js";
 import { serverConfig } from "./config/server-config.js";
 import { cleanupSchema } from "./config/cleanup-config.js";
 import { startSSEServer } from "./utils/sse.js";
+import {
+  k8sSecurityCheck,
+  k8sSecurityCheckSchema,
+} from "./tools/k8s_security_check.js";
+allTools.push(k8sSecurityCheckSchema);
+
+case "k8s_security_check": {
+  return await k8sSecurityCheck(k8sManager);
+}
 import {
   startPortForward,
   PortForwardSchema,
