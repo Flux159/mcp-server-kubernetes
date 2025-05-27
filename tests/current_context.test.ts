@@ -2,7 +2,6 @@ import { expect, test, describe, beforeEach, afterEach } from "vitest";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { GetCurrentContextResponseSchema } from "../src/models/response-schemas.js";
-import { asResponseSchema } from "./context-helper";
 
 /**
  * Utility function to create a promise that resolves after specified milliseconds
@@ -63,7 +62,7 @@ describe("kubernetes current context operations", () => {
 
   /**
    * Test case: Get current Kubernetes context
-   * Verifies that the kubectl_context tool returns the current context information
+   * Verifies that the get_current_context tool returns the current context information
    */
   test("get current context", async () => {
     console.log("Getting current Kubernetes context...");
@@ -71,14 +70,13 @@ describe("kubernetes current context operations", () => {
       {
         method: "tools/call",
         params: {
-          name: "kubectl_context",
+          name: "get_current_context",
           arguments: {
-            operation: "get",
             detailed: false,
           },
         },
       },
-      asResponseSchema(GetCurrentContextResponseSchema)
+      GetCurrentContextResponseSchema
     );
 
     // Verify the response structure
@@ -97,7 +95,7 @@ describe("kubernetes current context operations", () => {
 
   /**
    * Test case: Get detailed current Kubernetes context
-   * Verifies that the kubectl_context tool returns detailed information when requested
+   * Verifies that the get_current_context tool returns detailed information when requested
    */
   test("get detailed current context", async () => {
     console.log("Getting detailed current Kubernetes context...");
@@ -105,14 +103,13 @@ describe("kubernetes current context operations", () => {
       {
         method: "tools/call",
         params: {
-          name: "kubectl_context",
+          name: "get_current_context",
           arguments: {
-            operation: "get",
             detailed: true,
           },
         },
       },
-      asResponseSchema(GetCurrentContextResponseSchema)
+      GetCurrentContextResponseSchema
     );
 
     // Verify the response structure

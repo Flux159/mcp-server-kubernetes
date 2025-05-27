@@ -3,16 +3,6 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { CreateNamespaceResponseSchema, DeleteNamespaceResponseSchema } from "../src/models/response-schemas";
 import { KubernetesManager } from "../src/utils/kubernetes-manager.js";
-import { KubectlResponseSchema } from "../src/models/kubectl-models.js";
-import { z } from "zod";
-
-// Define the response type for easier use in tests
-type KubectlResponse = {
-  content: Array<{
-    type: "text";
-    text: string;
-  }>;
-};
 
 async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -57,99 +47,110 @@ describe("kubernetes server operations", () => {
     }
   });
 
-  test("create namespace using kubectl_create", async () => {
-    // NOTE: This test verifies the kubectl_create tool can be called for namespace creation
-    // It doesn't actually create a namespace due to potential cluster connectivity issues
-    
+  test("create namespace", async () => {
     const TEST_NAMESPACE_NAME = "test-namespace-mcp-server";
 
-    try {
-      const result = await client.request(
-        {
-          method: "tools/call",
-          params: {
-            name: "kubectl_create",
-            arguments: {
-              resourceType: "namespace",
-              name: TEST_NAMESPACE_NAME,
-            },
+    const result = await client.request(
+      {
+        method: "tools/call",
+        params: {
+          name: "create_namespace",
+          arguments: {
+            name: TEST_NAMESPACE_NAME,
           },
         },
-        // @ts-ignore - Ignoring type error to get tests running
-        z.any()
-      ) as KubectlResponse;
+      },
+      CreateNamespaceResponseSchema
+    );
 
-      // Verify the response contains confirmation of namespace creation
-      expect(result.content[0].type).toBe("text");
-      expect(result.content[0].text).toContain("namespace");
-      expect(result.content[0].text).toContain(TEST_NAMESPACE_NAME);
-    } catch (error) {
-      console.log("Error might be expected if cluster connectivity issues exist:", error.message);
-      // Skip test if there are connectivity issues
-      if (error.message && error.message.includes("Unable to connect to the server")) {
-        console.log("Skipping test due to cluster connectivity issues");
-        return;
-      }
-      throw error;
-    }
+    expect(result).toEqual({
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(
+            {
+              namespaceName: TEST_NAMESPACE_NAME,
+              status: "created",
+            },
+            null,
+            2
+          ),
+        },
+      ],
+    });
+
+    // Delete namespace after test using kubectl api directly since we don't have a delete_namespace tool yet
+    const k8sManager = new KubernetesManager();
+    await k8sManager.getCoreApi().deleteNamespace(TEST_NAMESPACE_NAME);
   });
 
-  test("delete namespace using kubectl_delete", async () => {
-    // NOTE: This test verifies the kubectl_delete tool can be called for namespace deletion
-    // It doesn't actually delete a namespace due to potential cluster connectivity issues
-    
+  test("delete namespace", async () => {
     const TEST_NAMESPACE_NAME = "test-namespace-mcp-server2";
-    
-    try {
-      // Create namespace before test using kubectl_create
-      await client.request(
-        {
-          method: "tools/call",
-          params: {
-            name: "kubectl_create",
-            arguments: {
-              resourceType: "namespace",
-              name: TEST_NAMESPACE_NAME,
-            },
+    // Create namespace before test
+    const k8sManager = new KubernetesManager();
+    const result = await client.request(
+      {
+        method: "tools/call",
+        params: {
+          name: "create_namespace",
+          arguments: {
+            name: TEST_NAMESPACE_NAME,
           },
         },
-        // @ts-ignore - Ignoring type error to get tests running
-        z.any()
-      );
-      
-      // Wait for namespace to be fully created
-      await sleep(1000);
-      
-      // Delete the namespace using kubectl_delete
-      const result2 = await client.request(
+      },
+      CreateNamespaceResponseSchema
+    );
+    expect(result).toEqual({
+      content: [
         {
-          method: "tools/call",
-          params: {
-            name: "kubectl_delete",
-            arguments: {
-              resourceType: "namespace",
-              name: TEST_NAMESPACE_NAME,
+          type: "text",
+          text: JSON.stringify(
+            {
+              namespaceName: TEST_NAMESPACE_NAME,
+              status: "created",
             },
+            null,
+            2
+          ),
+        },
+      ],
+    });
+    // Wait for namespace to be fully created
+    await sleep(2000);
+    const result2 = await client.request(
+      {
+        method: "tools/call",
+        params: {
+          name: "delete_namespace",
+          arguments: {
+            name: TEST_NAMESPACE_NAME,
           },
         },
-        // @ts-ignore - Ignoring type error to get tests running
-        z.any()
-      ) as KubectlResponse;
-      
-      // Verify the response contains confirmation of namespace deletion
-      expect(result2.content[0].type).toBe("text");
-      expect(result2.content[0].text).toContain("namespace");
-      expect(result2.content[0].text).toContain(TEST_NAMESPACE_NAME);
-      // The following might not be reliable if there are cluster connectivity issues
-      // expect(result2.content[0].text).toContain("deleted");
-    } catch (error) {
-      console.log("Error might be expected if cluster connectivity issues exist:", error.message);
-      // Skip test if there are connectivity issues
-      if (error.message && error.message.includes("Unable to connect to the server")) {
-        console.log("Skipping test due to cluster connectivity issues");
-        return;
-      }
-      throw error;
+      },
+      DeleteNamespaceResponseSchema,
+    );
+    expect(result2).toEqual({
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(
+            {
+              success: true,
+              status: "deleted",
+            },
+            null,
+            2
+          ),
+        }
+      ]
+    })
+
+    // verify namespace is deleted
+    const namespace = await k8sManager.getCoreApi().readNamespace(TEST_NAMESPACE_NAME);
+    if (namespace.body) {
+      expect(namespace.body.status?.phase).toBe("Terminating");
+    } else {
+      expect(namespace.body).toBeUndefined();
     }
-  });
+  })
 });

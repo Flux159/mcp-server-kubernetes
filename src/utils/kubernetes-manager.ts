@@ -1,5 +1,4 @@
 import * as k8s from "@kubernetes/client-node";
-import * as fs from "fs";
 import { ResourceTracker, PortForwardTracker, WatchTracker } from "../types.js";
 
 export class KubernetesManager {
@@ -13,46 +12,27 @@ export class KubernetesManager {
 
   constructor() {
     this.kc = new k8s.KubeConfig();
-    if (this.isRunningInCluster()) {
-      this.kc.loadFromCluster();
-    } else {
-      this.kc.loadFromDefault();
-    }
+    this.kc.loadFromDefault();
     this.k8sApi = this.kc.makeApiClient(k8s.CoreV1Api);
     this.k8sAppsApi = this.kc.makeApiClient(k8s.AppsV1Api);
     this.k8sBatchApi = this.kc.makeApiClient(k8s.BatchV1Api);
   }
 
   /**
-   * A very simple test to check if the application is running inside a Kubernetes cluster
-   */
-  private isRunningInCluster(): boolean {
-    const serviceAccountPath =
-      "/var/run/secrets/kubernetes.io/serviceaccount/token";
-    try {
-      return fs.existsSync(serviceAccountPath);
-    } catch {
-      return false;
-    }
-  }
-
-  /**
    * Set the current context to the desired context name.
-   *
-   * @param contextName
+   * 
+   * @param contextName 
    */
   public setCurrentContext(contextName: string) {
+
+
     // Get all available contexts
     const contexts = this.kc.getContexts();
-    const contextNames = contexts.map((context) => context.name);
+    const contextNames = contexts.map(context => context.name);
 
     // Check if the requested context exists
     if (!contextNames.includes(contextName)) {
-      throw new Error(
-        `Context '${contextName}' not found. Available contexts: ${contextNames.join(
-          ", "
-        )}`
-      );
+      throw new Error(`Context '${contextName}' not found. Available contexts: ${contextNames.join(', ')}`);
     }
     // Set the current context
     this.kc.setCurrentContext(contextName);

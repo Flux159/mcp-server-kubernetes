@@ -2,8 +2,7 @@ import { expect, test, describe, beforeEach, afterEach } from "vitest";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { KubectlResponseSchema } from "../src/models/kubectl-models.js";
-import { z } from "zod";
-import { asResponseSchema } from "./context-helper";
+import { GetEventsResponseSchema } from "../src/models/response-schemas.js";
 
 async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -85,7 +84,7 @@ describe("kubectl operations", () => {
             },
           },
         },
-        asResponseSchema(KubectlResponseSchema)
+        KubectlResponseSchema
       );
     });
 
@@ -111,7 +110,7 @@ describe("kubectl operations", () => {
             },
           },
         },
-        asResponseSchema(KubectlResponseSchema)
+        KubectlResponseSchema
       );
     });
 
@@ -138,7 +137,7 @@ describe("kubectl operations", () => {
             },
           },
         },
-        asResponseSchema(KubectlResponseSchema)
+        KubectlResponseSchema
       );
     });
 
@@ -166,7 +165,7 @@ describe("kubectl operations", () => {
             },
           },
         },
-        asResponseSchema(KubectlResponseSchema)
+        KubectlResponseSchema
       );
     });
 
@@ -188,15 +187,13 @@ describe("kubectl operations", () => {
           {
             method: "tools/call",
             params: {
-              name: "kubectl_get",
+              name: "get_events",
               arguments: {
-                resourceType: "events",
                 namespace: "default",
-                output: "json"
               },
             },
           },
-          asResponseSchema(KubectlResponseSchema)
+          GetEventsResponseSchema
         );
       });
 
@@ -227,15 +224,11 @@ describe("kubectl operations", () => {
           {
             method: "tools/call",
             params: {
-              name: "kubectl_get",
-              arguments: {
-                resourceType: "events",
-                allNamespaces: true,
-                output: "json"
-              },
+              name: "get_events",
+              arguments: {},
             },
           },
-          asResponseSchema(KubectlResponseSchema)
+          GetEventsResponseSchema
         );
       });
 
@@ -251,16 +244,14 @@ describe("kubectl operations", () => {
           {
             method: "tools/call",
             params: {
-              name: "kubectl_get",
+              name: "get_events",
               arguments: {
-                resourceType: "events",
                 namespace: "default",
                 fieldSelector: "type=Normal",
-                output: "json"
               },
             },
           },
-          asResponseSchema(KubectlResponseSchema)
+          GetEventsResponseSchema
         );
       });
 
@@ -275,159 +266,6 @@ describe("kubectl operations", () => {
           expect(event.type).toBe("Normal");
         });
       }
-    });
-  });
-
-  /**
-   * Test suite for unified kubectl-get events functionality
-   * Tests retrieval of Kubernetes events using the unified kubectl-get command
-   */
-  describe("kubectl-get events", () => {
-    test("get events from specific namespace using kubectl-get", async () => {
-      const result = await retry(async () => {
-        return await client.request(
-          {
-            method: "tools/call",
-            params: {
-              name: "kubectl_get",
-              arguments: {
-                resourceType: "events",
-                namespace: "default",
-                output: "json"
-              },
-            },
-          },
-          asResponseSchema(KubectlResponseSchema)
-        );
-      });
-
-      expect(result.content[0].type).toBe("text");
-      const events = JSON.parse(result.content[0].text);
-      expect(events.events).toBeDefined();
-      expect(Array.isArray(events.events)).toBe(true);
-
-      // Verify event object structure if events exist
-      if (events.events.length > 0) {
-        const event = events.events[0];
-        expect(event).toHaveProperty("type");
-        expect(event).toHaveProperty("reason");
-        expect(event).toHaveProperty("message");
-        expect(event).toHaveProperty("involvedObject");
-        expect(event.involvedObject).toHaveProperty("kind");
-        expect(event.involvedObject).toHaveProperty("name");
-        expect(event.involvedObject).toHaveProperty("namespace");
-        expect(event).toHaveProperty("firstTimestamp");
-        expect(event).toHaveProperty("lastTimestamp");
-        expect(event).toHaveProperty("count");
-      }
-    });
-
-    test("get events from all namespaces using kubectl-get", async () => {
-      const result = await retry(async () => {
-        return await client.request(
-          {
-            method: "tools/call",
-            params: {
-              name: "kubectl_get",
-              arguments: {
-                resourceType: "events",
-                allNamespaces: true,
-                output: "json"
-              },
-            },
-          },
-          asResponseSchema(KubectlResponseSchema)
-        );
-      });
-
-      expect(result.content[0].type).toBe("text");
-      const events = JSON.parse(result.content[0].text);
-      expect(events.events).toBeDefined();
-      expect(Array.isArray(events.events)).toBe(true);
-    });
-
-    test("get events with field selector using kubectl-get", async () => {
-      const result = await retry(async () => {
-        return await client.request(
-          {
-            method: "tools/call",
-            params: {
-              name: "kubectl_get",
-              arguments: {
-                resourceType: "events",
-                namespace: "default",
-                fieldSelector: "type=Normal",
-                output: "json"
-              },
-            },
-          },
-          asResponseSchema(KubectlResponseSchema)
-        );
-      });
-
-      expect(result.content[0].type).toBe("text");
-      const events = JSON.parse(result.content[0].text);
-      expect(events.events).toBeDefined();
-      expect(Array.isArray(events.events)).toBe(true);
-
-      // Verify filtered events
-      if (events.events.length > 0) {
-        events.events.forEach((event: any) => {
-          expect(event.type).toBe("Normal");
-        });
-      }
-    });
-
-    test("get events with custom sorting using kubectl-get", async () => {
-      const result = await retry(async () => {
-        return await client.request(
-          {
-            method: "tools/call",
-            params: {
-              name: "kubectl_get",
-              arguments: {
-                resourceType: "events",
-                namespace: "default",
-                sortBy: "type",
-                output: "json"
-              },
-            },
-          },
-          asResponseSchema(KubectlResponseSchema)
-        );
-      });
-
-      expect(result.content[0].type).toBe("text");
-      const events = JSON.parse(result.content[0].text);
-      expect(events.events).toBeDefined();
-      expect(Array.isArray(events.events)).toBe(true);
-    });
-
-    test("get events with custom output format using kubectl-get", async () => {
-      const result = await retry(async () => {
-        return await client.request(
-          {
-            method: "tools/call",
-            params: {
-              name: "kubectl_get",
-              arguments: {
-                resourceType: "events",
-                namespace: "default",
-                output: "custom"
-              },
-            },
-          },
-          asResponseSchema(KubectlResponseSchema)
-        );
-      });
-
-      expect(result.content[0].type).toBe("text");
-      const output = result.content[0].text;
-      expect(output).toContain("LAST SEEN");
-      expect(output).toContain("TYPE");
-      expect(output).toContain("REASON");
-      expect(output).toContain("OBJECT");
-      expect(output).toContain("MESSAGE");
     });
   });
 });

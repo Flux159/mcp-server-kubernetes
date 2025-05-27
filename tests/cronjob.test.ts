@@ -1,15 +1,16 @@
-import { expect, test, describe, beforeEach, afterEach } from "vitest";
+import { expect, test, describe, beforeEach, afterEach, vi } from "vitest";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { z } from "zod";
-
-// Define the response type for easier use in tests
-type KubectlResponse = {
-  content: Array<{
-    type: "text";
-    text: string;
-  }>;
-};
+import {
+  ListCronJobsResponseSchema,
+  CreateCronJobResponseSchema,
+  DescribeCronJobResponseSchema,
+  ListJobsResponseSchema,
+  GetJobLogsResponseSchema,
+  CreateNamespaceResponseSchema,
+  DeleteCronJobResponseSchema,
+} from "../src/models/response-schemas.js";
+import { KubernetesManager } from "../src/utils/kubernetes-manager.js";
 
 /**
  * Utility function to create a promise that resolves after specified milliseconds
@@ -26,10 +27,10 @@ function generateRandomId(): string {
 }
 
 /**
- * Test suite for CronJob related operations using kubectl commands
+ * Test suite for CronJob related operations
  * Tests CronJob creation, listing, describing, and associated Job operations
  */
-describe("kubernetes cronjob operations with kubectl commands", () => {
+describe("kubernetes cronjob operations", () => {
   let transport: StdioClientTransport;
   let client: Client;
   let testNamespace: string;
@@ -61,8 +62,8 @@ describe("kubernetes cronjob operations with kubectl commands", () => {
       );
 
       await client.connect(transport);
-      // Wait longer for connection to be established
-      await sleep(5000);
+      // Wait for connection to be established
+      await sleep(1000);
 
       // Create a unique test namespace for test isolation
       testNamespace = `${NAMESPACE_PREFIX}-${generateRandomId()}`;
@@ -72,19 +73,17 @@ describe("kubernetes cronjob operations with kubectl commands", () => {
         {
           method: "tools/call",
           params: {
-            name: "kubectl_create",
+            name: "create_namespace",
             arguments: {
-              resourceType: "namespace",
               name: testNamespace,
             },
           },
         },
-        // @ts-ignore - Ignoring type error for now
-        z.any()
+        CreateNamespaceResponseSchema
       );
 
-      // Wait longer for namespace to be fully created
-      await sleep(5000);
+      // Wait for namespace to be fully created
+      await sleep(2000);
     } catch (e) {
       console.error("Error in beforeEach:", e);
       throw e;
@@ -98,26 +97,14 @@ describe("kubernetes cronjob operations with kubectl commands", () => {
    */
   afterEach(async () => {
     try {
-      // Clean up namespace using kubectl_delete
+      // Clean up namespace using direct API call
       console.log(`Cleaning up test namespace: ${testNamespace}`);
-      await client.request(
-        {
-          method: "tools/call",
-          params: {
-            name: "kubectl_delete",
-            arguments: {
-              resourceType: "namespace",
-              name: testNamespace,
-            },
-          },
-        },
-        // @ts-ignore - Ignoring type error for now
-        z.any()
-      );
+      const k8sManager = new KubernetesManager();
+      await k8sManager.getCoreApi().deleteNamespace(testNamespace);
 
       // Close client connection
       await transport.close();
-      await sleep(5000);
+      await sleep(1000);
     } catch (e) {
       console.error("Error during cleanup:", e);
     }
@@ -127,229 +114,157 @@ describe("kubernetes cronjob operations with kubectl commands", () => {
    * Test case: Verify CronJob listing functionality
    */
   test("list cronjobs in namespace", async () => {
-    // List CronJobs using kubectl_list
+    // List CronJobs
     const listResult = await client.request(
       {
         method: "tools/call",
         params: {
-          name: "kubectl_list",
+          name: "list_cronjobs",
           arguments: {
-            resourceType: "cronjobs",
             namespace: testNamespace,
-            output: "json"
           },
         },
       },
-      // @ts-ignore - Ignoring type error for now
-      z.any()
-    ) as KubectlResponse;
+      ListCronJobsResponseSchema
+    );
 
     expect(listResult.content[0].type).toBe("text");
     const cronJobs = JSON.parse(listResult.content[0].text);
-    expect(cronJobs).toBeDefined();
-    
-    // Check the structure of the response
-    if (cronJobs.items) {
-      expect(Array.isArray(cronJobs.items)).toBe(true);
-    } else if (Array.isArray(cronJobs)) {
-      // Direct array response
-      expect(Array.isArray(cronJobs)).toBe(true);
-    } else {
-      // Unexpected format, log for debugging
-      console.log("Unexpected CronJobs response format:", JSON.stringify(cronJobs).substring(0, 300));
-    }
-  }, 60000); // 60 second timeout
+    expect(cronJobs.cronjobs).toBeDefined();
+    expect(Array.isArray(cronJobs.cronjobs)).toBe(true);
+  });
 
   /**
    * Test case: Comprehensive CronJob lifecycle
    * Tests creating, describing, and managing a CronJob
    */
   test(
-    "cronjob lifecycle management with kubectl commands",
+    "cronjob lifecycle management",
     async () => {
       const cronJobName = `test-cronjob-${generateRandomId()}`;
 
       // Step 1: Create a new CronJob
       console.log(`Creating CronJob: ${cronJobName}`);
-      
-      // Create CronJob manifest
-      const cronJobManifest = `
-apiVersion: batch/v1
-kind: CronJob
-metadata:
-  name: ${cronJobName}
-  namespace: ${testNamespace}
-  labels:
-    mcp-managed: "true"
-    app: ${cronJobName}
-spec:
-  schedule: "*/5 * * * *"
-  suspend: true
-  jobTemplate:
-    spec:
-      template:
-        spec:
-          containers:
-          - name: ${cronJobName}
-            image: busybox
-            command: ["/bin/sh", "-c", "echo Hello from CronJob $(date)"]
-          restartPolicy: OnFailure
-`;
-
       const createResult = await client.request(
         {
           method: "tools/call",
           params: {
-            name: "kubectl_create",
+            name: "create_cronjob",
             arguments: {
-              manifest: cronJobManifest,
-              namespace: testNamespace
+              name: cronJobName,
+              namespace: testNamespace,
+              schedule: "*/5 * * * *", // Run every 5 minutes
+              image: "busybox",
+              command: ["/bin/sh", "-c", "echo Hello from CronJob $(date)"],
+              suspend: true, // Suspend it so it doesn't actually run during test
             },
           },
         },
-        // @ts-ignore - Ignoring type error for now
-        z.any()
-      ) as KubectlResponse;
+        CreateCronJobResponseSchema
+      );
 
       // Verify creation response
       expect(createResult.content[0].type).toBe("text");
-      expect(createResult.content[0].text).toContain("CronJob");
-      expect(createResult.content[0].text).toContain(cronJobName);
+      const createResponse = JSON.parse(createResult.content[0].text);
+      expect(createResponse.cronJobName).toBe(cronJobName);
+      expect(createResponse.schedule).toBe("*/5 * * * *");
+      expect(createResponse.status).toBe("created");
 
       // Wait for CronJob to be fully created
-      await sleep(5000);
+      await sleep(3000);
 
       // Step 2: Verify CronJob appears in list
       const listResult = await client.request(
         {
           method: "tools/call",
           params: {
-            name: "kubectl_get",
+            name: "list_cronjobs",
             arguments: {
-              resourceType: "cronjobs",
               namespace: testNamespace,
-              output: "json"
             },
           },
         },
-        // @ts-ignore - Ignoring type error for now
-        z.any()
-      ) as KubectlResponse;
+        ListCronJobsResponseSchema
+      );
 
-      //print the response
-      console.log("List CronJobs response:", listResult.content[0].text);
-      expect(listResult.content[0].type).toBe("text");
       const cronJobs = JSON.parse(listResult.content[0].text);
-      expect(cronJobs).toBeDefined();
-      
-      // Find our CronJob in the list - handle different response formats
-      let createdCronJob;
-      
-      if (cronJobs.items && Array.isArray(cronJobs.items)) {
-        // Standard K8s API response
-        createdCronJob = cronJobs.items.find((cj: any) => {
-          if (cj.metadata && cj.metadata.name) {
-            return cj.metadata.name === cronJobName;
-          } else if (cj.name) {
-            return cj.name === cronJobName;
-          }
-          return false;
-        });
-      } else if (Array.isArray(cronJobs)) {
-        // Direct array response
-        createdCronJob = cronJobs.find((cj: any) => {
-          if (typeof cj === 'string') {
-            return cj === cronJobName;
-          } else if (cj.metadata && cj.metadata.name) {
-            return cj.metadata.name === cronJobName;
-          } else if (cj.name) {
-            return cj.name === cronJobName;
-          }
-          return false;
-        });
-      }
-      
+      expect(cronJobs.cronjobs).toBeDefined();
+
+      // Find our CronJob in the list
+      const createdCronJob = cronJobs.cronjobs.find(
+        (cj: any) => cj.name === cronJobName
+      );
       expect(createdCronJob).toBeDefined();
-      
-      // Based on the actual response, we can only verify that the CronJob was created
-      // The simplified API response doesn't include schedule or suspend values
-      // Let's use kubectl_describe to get more detailed information
-      
+      expect(createdCronJob.schedule).toBe("*/5 * * * *");
+      expect(createdCronJob.suspend).toBe(true);
+
       // Step 3: Describe the CronJob
       const describeResult = await client.request(
         {
           method: "tools/call",
           params: {
-            name: "kubectl_describe",
+            name: "describe_cronjob",
             arguments: {
-              resourceType: "cronjob",
               name: cronJobName,
               namespace: testNamespace,
             },
           },
         },
-        // @ts-ignore - Ignoring type error for now
-        z.any()
-      ) as KubectlResponse;
+        DescribeCronJobResponseSchema
+      );
 
       expect(describeResult.content[0].type).toBe("text");
-      const describeOutput = describeResult.content[0].text;
-      console.log("Describe CronJob output excerpt:", describeOutput.substring(0, 300));
-      
-      // Verify the schedule and suspended state from the describe output
-      expect(describeOutput).toContain(cronJobName);
-      expect(describeOutput).toContain("*/5 * * * *");  // Schedule should appear in the describe output
-      expect(describeOutput).toContain("Suspend:"); // Check that suspend property exists
-      expect(describeOutput).toMatch(/Suspend:.*True/i); // Check for suspend status (case-insensitive)
-      expect(describeOutput).toContain("busybox");
+      const cronJobDetails = JSON.parse(describeResult.content[0].text);
+      expect(cronJobDetails.name).toBe(cronJobName);
+      expect(cronJobDetails.namespace).toBe(testNamespace);
+      expect(cronJobDetails.schedule).toBe("*/5 * * * *");
+      expect(cronJobDetails.suspend).toBe(true);
+      expect(cronJobDetails.jobTemplate.image).toBe("busybox");
 
       // Step 4: List Jobs (should be empty since CronJob is suspended)
       const listJobsResult = await client.request(
         {
           method: "tools/call",
           params: {
-            name: "kubectl_list",
+            name: "list_jobs",
             arguments: {
-              resourceType: "jobs",
               namespace: testNamespace,
-              labelSelector: `app=${cronJobName}`,
-              output: "json"
+              cronJobName: cronJobName,
             },
           },
         },
-        // @ts-ignore - Ignoring type error for now
-        z.any()
-      ) as KubectlResponse;
+        ListJobsResponseSchema
+      );
 
       expect(listJobsResult.content[0].type).toBe("text");
       const jobs = JSON.parse(listJobsResult.content[0].text);
-      expect(jobs.items).toBeDefined();
-      expect(Array.isArray(jobs.items)).toBe(true);
+      expect(jobs.jobs).toBeDefined();
+      expect(Array.isArray(jobs.jobs)).toBe(true);
       // Should be empty since we suspended the CronJob
-      expect(jobs.items.length).toBe(0);
+      expect(jobs.jobs.length).toBe(0);
 
-      // Step 5: Delete the CronJob
-      const deleteCronJobResult = await client.request(
+      const deletecronjobresult = await client.request(
         {
-          method: "tools/call",
-          params: {
-            name: "kubectl_delete",
-            arguments: {
-              resourceType: "cronjob",
-              name: cronJobName,
-              namespace: testNamespace,
+          method : "tools/call",
+          params : {
+            name : "delete_cronjob",
+            arguments  : {
+              name : cronJobName,
+              namespace : testNamespace,
             },
           },
         },
-        // @ts-ignore - Ignoring type error for now
-        z.any()
-      ) as KubectlResponse;
+        DeleteCronJobResponseSchema
+      );
 
-      expect(deleteCronJobResult.content[0].type).toBe("text");
-      expect(deleteCronJobResult.content[0].text).toContain(`"${cronJobName}" deleted`);
+      expect(deletecronjobresult.content[0].success).toBe(true)
+      expect(deletecronjobresult.content[0].message).toContain(`Deleted cronjob ${cronJobName} in namespace ${testNamespace}.`)
+
       
+      // No need to test get_job_logs since we don't have any jobs in this controlled test
+
       // We should rely on the cleanup in afterEach to remove all resources
     },
-    { timeout: 120000 } // 120 second timeout for increased reliability
+    { timeout: 60000 } // 60 second timeout
   );
 });

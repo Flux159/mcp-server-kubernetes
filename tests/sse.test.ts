@@ -1,12 +1,12 @@
 import { expect, test, describe, beforeAll, afterAll } from "vitest";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { startSSEServer } from "../src/utils/sse.js";
+import { listPods, listPodsSchema } from "../src/tools/list_pods.js";
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { KubernetesManager } from "../src/utils/kubernetes-manager.js";
-import { kubectlListSchema, kubectlList } from "../src/tools/kubectl-list.js";
 
 describe("SSE transport", () => {
   let server: Server;
@@ -16,7 +16,7 @@ describe("SSE transport", () => {
   beforeAll(async () => {
     const k8sManager = new KubernetesManager();
 
-    // Create a minimal server with just the kubectl_list tool
+    // Create a minimal server with just the list_pods tool
     server = new Server(
       {
         name: "test-server",
@@ -29,10 +29,10 @@ describe("SSE transport", () => {
       }
     );
 
-    // Set up the kubectl_list tool
+    // Set up the list_pods tool
     server.setRequestHandler(ListToolsRequestSchema, async () => {
       return {
-        tools: [kubectlListSchema],
+        tools: [listPodsSchema],
       };
     });
 
@@ -40,15 +40,8 @@ describe("SSE transport", () => {
       const { name, arguments: input = {} } = request.params;
 
       switch (name) {
-        case "kubectl_list":
-          return await kubectlList(k8sManager, input as { 
-            resourceType: string;
-            namespace?: string;
-            output?: string;
-            allNamespaces?: boolean;
-            labelSelector?: string;
-            fieldSelector?: string;
-          });
+        case "list_pods":
+          return await listPods(k8sManager, input as { namespace?: string });
         default:
           throw new Error(`Unknown tool: ${name}`);
       }
@@ -108,12 +101,8 @@ describe("SSE transport", () => {
           id: 1234,
           method: "tools/call",
           params: {
-            name: "kubectl_list",
-            arguments: {
-              resourceType: "pods",
-              namespace: "default",
-              output: "json"
-            }
+            name: "list_pods",
+            namespace: "default",
           },
         }),
       }
@@ -147,18 +136,9 @@ describe("SSE transport", () => {
     expect(toolCallResult.id).toBe(1234);
     if (toolCallResult.result) {
       expect(toolCallResult.result.content[0].type).toBe("text");
-      const responseText = toolCallResult.result.content[0].text;
-      
-      // If it's JSON, parse it and check structure
-      try {
-        const parsedResponse = JSON.parse(responseText);
-        expect(parsedResponse.items).toBeDefined();
-        expect(Array.isArray(parsedResponse.items)).toBe(true);
-      } catch (e) {
-        // If not JSON (formatted output), just check it contains pod data
-        expect(responseText).toContain("NAME");
-        expect(responseText).toContain("NAMESPACE");
-      }
+      const pods = JSON.parse(toolCallResult.result.content[0].text);
+      expect(pods.pods).toBeDefined();
+      expect(Array.isArray(pods.pods)).toBe(true);
     }
   });
 });

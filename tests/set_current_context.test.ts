@@ -2,7 +2,6 @@ import { expect, test, describe, beforeEach, afterEach } from "vitest";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { SetCurrentContextResponseSchema } from "../src/models/response-schemas.js";
-import { asResponseSchema } from "./context-helper";
 
 /**
  * Utility function to create a promise that resolves after specified milliseconds
@@ -49,14 +48,13 @@ describe("kubernetes set current context operations", () => {
         {
           method: "tools/call",
           params: {
-            name: "kubectl_context",
+            name: "get_current_context",
             arguments: {
-              operation: "get",
               detailed: false,
             },
           },
         },
-        asResponseSchema(SetCurrentContextResponseSchema)
+        SetCurrentContextResponseSchema
       );
 
       const contextData = JSON.parse(result.content[0].text);
@@ -81,14 +79,13 @@ describe("kubernetes set current context operations", () => {
           {
             method: "tools/call",
             params: {
-              name: "kubectl_context",
+              name: "set_current_context",
               arguments: {
-                operation: "set",
                 name: originalContext,
               },
             },
           },
-          asResponseSchema(SetCurrentContextResponseSchema)
+          SetCurrentContextResponseSchema
         );
       }
 
@@ -101,7 +98,7 @@ describe("kubernetes set current context operations", () => {
 
   /**
    * Test case: Set current Kubernetes context
-   * Verifies that the kubectl_context tool changes the current context
+   * Verifies that the set_current_context tool changes the current context
    */
   test("set current context", async () => {
     // Get available contexts
@@ -109,14 +106,13 @@ describe("kubernetes set current context operations", () => {
       {
         method: "tools/call",
         params: {
-          name: "kubectl_context",
+          name: "list_contexts",
           arguments: {
-            operation: "list",
             showCurrent: true,
           },
         },
       },
-      asResponseSchema(SetCurrentContextResponseSchema)
+      SetCurrentContextResponseSchema
     );
 
     const contextsData = JSON.parse(contextsResult.content[0].text);
@@ -139,14 +135,13 @@ describe("kubernetes set current context operations", () => {
       {
         method: "tools/call",
         params: {
-          name: "kubectl_context",
+          name: "set_current_context",
           arguments: {
-            operation: "set",
             name: otherContext.name,
           },
         },
       },
-      asResponseSchema(SetCurrentContextResponseSchema)
+      SetCurrentContextResponseSchema
     );
 
     // Verify the response structure
@@ -157,7 +152,7 @@ describe("kubernetes set current context operations", () => {
 
     // Verify that the context was set successfully
     expect(responseData.success).toBe(true);
-    expect(responseData.message).toContain(`Current context set to`);
+    expect(responseData.message).toContain(`Current context set to '${otherContext.name}'`);
     expect(responseData.context).toBe(otherContext.name);
 
     // Verify that the current context has actually changed
@@ -165,32 +160,17 @@ describe("kubernetes set current context operations", () => {
       {
         method: "tools/call",
         params: {
-          name: "kubectl_context",
+          name: "get_current_context",
           arguments: {
-            operation: "get",
             detailed: false,
           },
         },
       },
-      asResponseSchema(SetCurrentContextResponseSchema)
+      SetCurrentContextResponseSchema
     );
 
     const verifyData = JSON.parse(verifyResult.content[0].text);
-    
-    // Handle both name formats - short name and ARN format
-    // Extract the short name from the ARN if necessary
-    let shortName = otherContext.name;
-    if (shortName.includes("cluster/")) {
-      const parts = shortName.split("cluster/");
-      if (parts.length > 1) {
-        shortName = parts[1];
-      }
-    }
-    
-    // Allow the test to pass with either format of the name
-    const contextMatches = verifyData.currentContext === otherContext.name || 
-                          verifyData.currentContext === shortName;
-    expect(contextMatches).toBe(true);
+    expect(verifyData.currentContext).toBe(otherContext.name);
 
     console.log("Context successfully changed and verified");
   });

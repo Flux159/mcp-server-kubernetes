@@ -66,27 +66,25 @@ npx mcp-chat --config "%APPDATA%\Claude\claude_desktop_config.json"
 ## Features
 
 - [x] Connect to a Kubernetes cluster
-- [x] Unified kubectl API for managing resources
-  - Get or list resources with `kubectl_get`
-  - Describe resources with `kubectl_describe`
-  - List resources with `kubectl_list`
-  - Create resources with `kubectl_create`
-  - Apply YAML manifests with `kubectl_apply`
-  - Delete resources with `kubectl_delete`
-  - Get logs with `kubectl_logs`
-  - Manage kubectl contexts with `kubectl_context`
-  - Explain Kubernetes resources with `explain_resource`
-  - List API resources with `list_api_resources`
-  - Scale resources with `kubectl_scale`
-  - Update field(s) of a resource with `kubectl_patch`
-  - Manage deployment rollouts with `kubectl_rollout`
-  - Execute any kubectl command with `kubectl_generic`
-- [x] Advanced operations
-  - Scale deployments with `kubectl_scale` (replaces legacy `scale_deployment`)
-  - Port forward to pods and services with `port_forward`
-  - Run Helm operations
-    - Install, upgrade, and uninstall charts
-    - Support for custom values, repositories, and versions
+- [x] List all pods, services, deployments
+- [x] List, Describe nodes
+- [x] Create, describe, delete a pod
+- [x] List all namespaces, create a namespace
+- [x] Create custom pod & deployment configs, update deployment replicas
+- [x] Create, describe, delete, update a service
+- [x] Create, get, update, delete a ConfigMap
+- [x] Get logs from a pod for debugging (supports pods, deployments, jobs, and label selectors)
+- [x] Support Helm v3 for installing charts
+  - Install charts with custom values
+  - Uninstall releases
+  - Upgrade existing releases
+  - Support for namespaces
+  - Support for version specification
+  - Support for custom repositories
+- [x] kubectl explain and kubectl api-resources support
+- [x] Get Kubernetes events from the cluster
+- [x] Port forward to a pod or service
+- [x] Create, list, and decribe cronjobs
 - [x] Non-destructive mode for read and create/update-only access to clusters
 
 ## Local Development
@@ -151,50 +149,9 @@ See the [CONTRIBUTING.md](CONTRIBUTING.md) file for details.
 
 ## Advanced
 
-### Non-Destructive Mode
+### Additional Advanced Features
 
-You can run the server in a non-destructive mode that disables all destructive operations (delete pods, delete deployments, delete namespaces, etc.):
-
-```shell
-ALLOW_ONLY_NON_DESTRUCTIVE_TOOLS=true npx mcp-server-kubernetes
-```
-
-For Claude Desktop configuration with non-destructive mode:
-
-```json
-{
-  "mcpServers": {
-    "kubernetes-readonly": {
-      "command": "npx",
-      "args": ["mcp-server-kubernetes"],
-      "env": {
-        "ALLOW_ONLY_NON_DESTRUCTIVE_TOOLS": "true"
-      }
-    }
-  }
-}
-```
-
-### Commands Available in Non-Destructive Mode
-
-All read-only and resource creation/update operations remain available:
-
-- Resource Information: `kubectl_get`, `kubectl_describe`, `kubectl_list`, `kubectl_logs`, `explain_resource`, `list_api_resources`
-- Resource Creation/Modification: `kubectl_apply`, `kubectl_create`, `kubectl_scale`, `kubectl_patch`, `kubectl_rollout`
-- Helm Operations: `install_helm_chart`, `upgrade_helm_chart`
-- Connectivity: `port_forward`, `stop_port_forward`
-- Context Management: `kubectl_context`
-
-### Commands Disabled in Non-Destructive Mode
-
-The following destructive operations are disabled:
-
-- `kubectl_delete`: Deleting any Kubernetes resources
-- `uninstall_helm_chart`: Uninstalling Helm charts
-- `cleanup`: Cleanup of managed resources
-- `kubectl_generic`: General kubectl command access (may include destructive operations)
-
-For additional advanced features, see the [ADVANCED_README.md](ADVANCED_README.md).
+For more advanced information like using SSE transport, Non-destructive mode with `ALLOW_ONLY_NON_DESTRUCTIVE_TOOLS`, see the [ADVANCED_README.md](ADVANCED_README.md).
 
 ## Architecture
 
@@ -209,34 +166,19 @@ The sequence diagram below illustrates how requests flow through the system:
 ```mermaid
 sequenceDiagram
     participant Client
-    participant Transport as Transport Layer
+    participant Transport as StdioTransport
     participant Server as MCP Server
-    participant Filter as Tool Filter
     participant Handler as Request Handler
     participant K8sManager as KubernetesManager
     participant K8s as Kubernetes API
 
-    Note over Transport: StdioTransport or<br>SSE Transport
-
-    Client->>Transport: Send Request
+    Client->>Transport: Send Request via STDIO
     Transport->>Server: Forward Request
 
     alt Tools Request
-        Server->>Filter: Filter available tools
-        Note over Filter: Remove destructive tools<br>if in non-destructive mode
-        Filter->>Handler: Route to tools handler
-
-        alt kubectl operations
-            Handler->>K8sManager: Execute kubectl operation
-            K8sManager->>K8s: Make API call
-        else Helm operations
-            Handler->>K8sManager: Execute Helm operation
-            K8sManager->>K8s: Make API call
-        else Port Forward operations
-            Handler->>K8sManager: Set up port forwarding
-            K8sManager->>K8s: Make API call
-        end
-
+        Server->>Handler: Route to tools handler
+        Handler->>K8sManager: Execute tool operation
+        K8sManager->>K8s: Make API call
         K8s-->>K8sManager: Return result
         K8sManager-->>Handler: Process response
         Handler-->>Server: Return tool result
@@ -253,8 +195,6 @@ sequenceDiagram
     Transport-->>Client: Return Final Response
 ```
 
-See this [DeepWiki link](https://deepwiki.com/Flux159/mcp-server-kubernetes) for a more indepth architecture overview created by Devin.
-
 ## Publishing new release
 
 Go to the [releases page](https://github.com/Flux159/mcp-server-kubernetes/releases), click on "Draft New Release", click "Choose a tag" and create a new tag by typing out a new version number using "v{major}.{minor}.{patch}" semver format. Then, write a release title "Release v{major}.{minor}.{patch}" and description / changelog if necessary and click "Publish Release".
@@ -263,4 +203,4 @@ This will create a new tag which will trigger a new release build via the cd.yml
 
 ## Not planned
 
-Adding clusters to kubectx.
+Authentication / adding clusters to kubectx.

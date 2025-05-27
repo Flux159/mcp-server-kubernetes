@@ -2,15 +2,14 @@
 import { expect, test, describe, beforeEach, afterEach } from "vitest";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { z } from "zod";
-
-// Define the response type for easier use in tests
-type KubectlResponse = {
-  content: Array<{
-    type: "text";
-    text: string;
-  }>;
-};
+import { CreateNamespaceResponseSchema } from "../src/types";
+import {
+  CreateConfigMapResponseSchema,
+  GetConfigMapResponseSchema,
+  UpdateConfigMapResponseSchema,
+  DeleteConfigMapResponseSchema
+} from "../src/models/response-schemas.js";
+import { KubernetesManager } from "../src/types";
 
 // Utility function to introduce a delay
 async function sleep(ms: number): Promise<void> {
@@ -27,8 +26,8 @@ function generateRandomSHA(): string {
   return Math.random().toString(36).substring(2, 15);
 }
 
-// Test suite for Kubernetes ConfigMap operations using kubectl commands
-describe("test kubernetes configmap with kubectl commands", () => {
+// Test suite for Kubernetes ConfigMap operations
+describe("test kubernetes configmap", () => {
   let transport: StdioClientTransport;
   let client: Client;
   const NAMESPACE_PREFIX = "test-configmap"; // Prefix for test namespaces
@@ -55,34 +54,30 @@ describe("test kubernetes configmap with kubectl commands", () => {
       );
 
       await client.connect(transport);
-      await sleep(5000); // Wait longer for the client to connect
+      await sleep(1000); // Wait for the client to connect
 
       testNamespace = `${NAMESPACE_PREFIX}-${generateRandomId()}`;
       console.log(`Creating test namespace: ${testNamespace}`);
 
       console.log("About to create namespace:", testNamespace);
       try {
-        // Create a test namespace using kubectl_create
+        // Create a test namespace
         const namespaceResponse = await client.request({
           method: "tools/call",
           params: {
-            name: "kubectl_create",
+            name: "create_namespace",
             arguments: {
-              resourceType: "namespace",
-              name: testNamespace
+              name: testNamespace,
             },
           },
-        }, 
-        // @ts-ignore - Ignoring type error for now
-        z.any()) as KubectlResponse;
-        
+        }, CreateNamespaceResponseSchema);
         console.log("Namespace creation response:", JSON.stringify(namespaceResponse));
       } catch (error) {
         console.error("Error creating namespace:", error);
         throw error;
       }
 
-      await sleep(5000); // Wait longer for the namespace to be created
+      await sleep(2000); // Wait for the namespace to be created
     } catch (error: any) {
       console.error("Error in beforeEach:", error);
       throw error;
@@ -93,23 +88,10 @@ describe("test kubernetes configmap with kubectl commands", () => {
   afterEach(async () => {
     try {
       console.log(`Cleaning up test namespace: ${testNamespace}`);
-      
-      // Delete the test namespace using kubectl_delete
-      await client.request({
-        method: "tools/call",
-        params: {
-          name: "kubectl_delete",
-          arguments: {
-            resourceType: "namespace",
-            name: testNamespace
-          },
-        },
-      }, 
-      // @ts-ignore - Ignoring type error for now
-      z.any());
-      
+      const k8sManager = new KubernetesManager();
+      await k8sManager.getCoreApi().deleteNamespace(testNamespace); // Delete the test namespace
       await transport.close(); // Close the transport
-      await sleep(5000); // Wait longer for cleanup to complete
+      await sleep(1000); // Wait for cleanup to complete
     } catch (e) {
       console.error("Error during cleanup:", e);
     }
@@ -117,249 +99,192 @@ describe("test kubernetes configmap with kubectl commands", () => {
 
   // Test case: Verify creation of a ConfigMap
   test("verify creation of configmap", async () => {
-    const testData = {
+    const testdata = {
       key1: "hello",
       key2: "world",
     };
 
-    // Create ConfigMap using kubectl_create with resourceType and fromLiteral
-    const fromLiteralArgs = Object.entries(testData).map(([key, value]) => `${key}=${value}`);
-    
-    const createResponse = await client.request({
+    // Create a ConfigMap
+    const configmap_response = client.request({
       method: "tools/call",
       params: {
-        name: "kubectl_create",
+        name: "create_configmap",
         arguments: {
-          resourceType: "configmap",
           name: testName,
           namespace: testNamespace,
-          fromLiteral: fromLiteralArgs
+          data: testdata,
         },
       },
-    }, 
-    // @ts-ignore - Ignoring type error for now
-    z.any()) as KubectlResponse;
+    }, CreateConfigMapResponseSchema);
 
-    console.log("ConfigMap creation response:", JSON.stringify(createResponse));
-    expect(createResponse.content[0].type).toBe("text");
-    expect(createResponse.content[0].text).toContain(`kind: ConfigMap`);
-    expect(createResponse.content[0].text).toContain(`name: ${testName}`);
-    
-    // Wait longer for the ConfigMap to be fully created
-    await sleep(5000);
-  }, 60000); // 60 second timeout
+    await sleep(2000);
+    const result = await configmap_response as any;
+    console.log(result.content[0]);
+    // Validate the response
+    expect(result.content[0].success).toBe(true);
+    expect(result.content[0].message).toContain(
+      `Created ConfigMap ${testName} in namespace ${testNamespace}`
+    );
+  });
 
   // Test case: Verify retrieval of a ConfigMap
   test("verify get of configmap", async () => {
-    const testData = {
+    const testdata = {
       key1: "foo",
       key2: "bar",
     };
 
-    // Create ConfigMap using kubectl_create with resourceType and fromLiteral
-    const fromLiteralArgs = Object.entries(testData).map(([key, value]) => `${key}=${value}`);
-    
+    // Create a ConfigMap
     await client.request({
       method: "tools/call",
       params: {
-        name: "kubectl_create",
+        name: "create_configmap",
         arguments: {
-          resourceType: "configmap",
           name: testName,
           namespace: testNamespace,
-          fromLiteral: fromLiteralArgs
+          data: testdata,
         },
       },
-    }, 
-    // @ts-ignore - Ignoring type error for now
-    z.any()) as KubectlResponse;
-    
-    await sleep(5000); // Wait longer for the ConfigMap to be created
+    }, CreateConfigMapResponseSchema);
+    await sleep(2000); // Wait for the ConfigMap to be created
 
-    // Retrieve the ConfigMap using kubectl_get
-    const getResponse = await client.request({
+    // Retrieve the ConfigMap
+    const get_response = await client.request({
       method: "tools/call",
       params: {
-        name: "kubectl_get",
+        name: "get_configmap",
         arguments: {
-          resourceType: "configmap",
           name: testName,
           namespace: testNamespace,
-          output: "json"
         },
       },
-    }, 
-    // @ts-ignore - Ignoring type error for now
-    z.any()) as KubectlResponse;
+    }, GetConfigMapResponseSchema);
 
-    console.log("Get configmap response:", JSON.stringify(getResponse));
+    await sleep(1000);
+    const result = await get_response as any;
+    console.log("Get configmap response:", JSON.stringify(result));
+    // Validate the retrieved data
+    expect(result.content[0].success).toBe(true);
+    expect( result.content[0].message).toContain(
+      `Fetched ConfigMap ${testName} in namespace ${testNamespace}`
     
-    // Validate the content
-    expect(getResponse.content[0].type).toBe("text");
-    
-    // Parse the JSON response
-    const configMapData = JSON.parse(getResponse.content[0].text);
-    expect(configMapData.metadata.name).toBe(testName);
-    expect(configMapData.metadata.namespace).toBe(testNamespace);
-    expect(configMapData.data).toEqual(testData);
-  }, 60000); // 60 second timeout
+     );
+    expect( result.content[0].data).toEqual(testdata);
+  });
 
   // Test case: Verify update of a ConfigMap
   test("verify update of configmap", async () => {
-    const initialData = {
+    const testdata = {
       key1: "init",
       key2: "val",
     };
 
-    // Create ConfigMap using kubectl_create with resourceType and fromLiteral
-    const fromLiteralArgs = Object.entries(initialData).map(([key, value]) => `${key}=${value}`);
-    
+    // Create a ConfigMap
     await client.request({
       method: "tools/call",
       params: {
-        name: "kubectl_create",
+        name: "create_configmap",
         arguments: {
-          resourceType: "configmap",
           name: testName,
           namespace: testNamespace,
-          fromLiteral: fromLiteralArgs
+          data: testdata,
         },
       },
-    }, 
-    // @ts-ignore - Ignoring type error for now
-    z.any()) as KubectlResponse;
-    
-    await sleep(5000); // Wait longer for the ConfigMap to be created
+    }, CreateConfigMapResponseSchema);
+    await sleep(2000); // Wait for the ConfigMap to be created
 
-    // Now update the ConfigMap with new data
     const updatedData = {
       key1: "updated",
       key2: "val",
       key3: "new",
     };
-    
-    // Convert the updated data to YAML string for the manifest
-    const updatedDataYaml = Object.entries(updatedData)
-      .map(([key, value]) => `  ${key}: ${value}`)
-      .join('\n');
-    
-    // Update ConfigMap using kubectl_apply again
-    const updateManifest = `
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: ${testName}
-  namespace: ${testNamespace}
-data:
-${updatedDataYaml}
-`;
-    
-    const updateResponse = await client.request({
+
+    // Update the ConfigMap
+    const update_response = await client.request({
       method: "tools/call",
       params: {
-        name: "kubectl_apply",
+        name: "update_configmap",
         arguments: {
-          manifest: updateManifest,
-          namespace: testNamespace
-        },
-      },
-    }, 
-    // @ts-ignore - Ignoring type error for now
-    z.any()) as KubectlResponse;
-
-    console.log("ConfigMap update response:", JSON.stringify(updateResponse));
-    expect(updateResponse.content[0].type).toBe("text");
-    expect(updateResponse.content[0].text).toContain(`configmap/${testName} configured`);
-
-    // Wait longer for update to be applied
-    await sleep(5000);
-    
-    // Verify the update using kubectl_get
-    const getResponse = await client.request({
-      method: "tools/call",
-      params: {
-        name: "kubectl_get",
-        arguments: {
-          resourceType: "configmap",
           name: testName,
           namespace: testNamespace,
-          output: "json"
+          data: updatedData,
         },
       },
-    }, 
-    // @ts-ignore - Ignoring type error for now
-    z.any()) as KubectlResponse;
-    
-    // Parse the JSON response
-    const configMapData = JSON.parse(getResponse.content[0].text);
-    expect(configMapData.data).toEqual(updatedData);
-    expect(configMapData.data.key3).toBe("new");
-  }, 120000); // 120 second timeout for update test
+    }, UpdateConfigMapResponseSchema);
+
+    const result = await update_response as any;
+    console.log("Get configmap response:", JSON.stringify(result));
+    // Validate the update response
+    expect(result.content[0].success).toBe(true);
+    expect(result.content[0].message).toContain(
+      `Updated ConfigMap ${testName} in namespace ${testNamespace}`
+    );
+
+    // Retrieve the updated ConfigMap
+    const get_response = await client.request({
+      method: "tools/call",
+      params: {
+        name: "get_configmap",
+        arguments: {
+          name: testName,
+          namespace: testNamespace,
+        },
+      },
+    }, GetConfigMapResponseSchema) as any;
+    // Validate the updated data
+    expect(get_response.content[0].success).toBe(true);
+    expect(get_response.content[0].data).toEqual(updatedData);
+  });
 
   // Test case: Verify deletion of a ConfigMap
   test("verify delete of configmap", async () => {
-    const testData = {
+    const testdata = {
       key1: "to-be-deleted",
     };
 
-    // Create ConfigMap using kubectl_create with resourceType and fromLiteral
-    const fromLiteralArgs = Object.entries(testData).map(([key, value]) => `${key}=${value}`);
-    
+    // Create a ConfigMap
     await client.request({
       method: "tools/call",
       params: {
-        name: "kubectl_create",
+        name: "create_configmap",
         arguments: {
-          resourceType: "configmap",
           name: testName,
           namespace: testNamespace,
-          fromLiteral: fromLiteralArgs
+          data: testdata,
         },
       },
-    }, 
-    // @ts-ignore - Ignoring type error for now
-    z.any()) as KubectlResponse;
-    
-    await sleep(5000); // Wait longer for the ConfigMap to be created
+    }, CreateConfigMapResponseSchema);
+    await sleep(2000); // Wait for the ConfigMap to be created
 
-    // Delete the ConfigMap using kubectl_delete
-    const deleteResponse = await client.request({
+    // Delete the ConfigMap
+    const delete_response = await client.request({
       method: "tools/call",
       params: {
-        name: "kubectl_delete",
+        name: "delete_configmap",
         arguments: {
-          resourceType: "configmap",
-          name: testName,
-          namespace: testNamespace
-        },
-      },
-    }, 
-    // @ts-ignore - Ignoring type error for now
-    z.any()) as KubectlResponse;
-    
-    expect(deleteResponse.content[0].type).toBe("text");
-    expect(deleteResponse.content[0].text).toContain(`configmap "${testName}" deleted`);
-
-    // Verify the ConfigMap is deleted by trying to get it
-    await sleep(5000); // Wait longer for deletion to complete
-    
-    const getResponse = await client.request({
-      method: "tools/call",
-      params: {
-        name: "kubectl_get",
-        arguments: {
-          resourceType: "configmap",
           name: testName,
           namespace: testNamespace,
-          output: "json"
         },
       },
-    }, 
-    // @ts-ignore - Ignoring type error for now
-    z.any()) as KubectlResponse;
-    
-    // Should indicate the resource is not found
-    expect(getResponse.content[0].type).toBe("text");
-    expect(getResponse.content[0].text).toContain("not found");
-  }, 60000); // 60 second timeout
+    }, DeleteConfigMapResponseSchema);
+    // Validate the delete response
+    expect(delete_response.content[0].success).toBe(true);
+    expect(delete_response.content[0].message).toContain(
+      `Deleted ConfigMap ${testName} in namespace ${testNamespace}`
+    );
+
+    // Attempt to retrieve the deleted ConfigMap
+    const get_response = await client.request({
+      method: "tools/call",
+      params: {
+        name: "get_configmap",
+        arguments: {
+          name: testName,
+          namespace: testNamespace,
+        },
+      },
+    }, GetConfigMapResponseSchema);
+    // Validate that the ConfigMap no longer exists
+    expect(get_response.content[0].success).toBe(false);
+  });
 });

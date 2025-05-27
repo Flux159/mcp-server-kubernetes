@@ -28,7 +28,6 @@ class KubectlSequencer extends BaseSequencer {
 export default defineConfig({
   test: {
     testTimeout: 120000,
-    hookTimeout: 60000,
     exclude: ["dist/**/*", "node_modules/**/*"],
     sequence: {
       sequencer: KubectlSequencer,

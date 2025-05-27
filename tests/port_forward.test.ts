@@ -2,9 +2,11 @@ import { expect, test, describe, beforeEach, afterEach } from "vitest";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import {
+  ListPodsResponseSchema,
+  CreatePodResponseSchema,
+  DeletePodResponseSchema,
   PortForwardResponseSchema,
 } from "../src/models/response-schemas.js";
-import { KubectlResponseSchema } from "../src/models/kubectl-models.js";
 
 async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -14,7 +16,7 @@ function generateRandomSHA(): string {
   return Math.random().toString(36).substring(2, 15);
 }
 
-describe("kubectl operations", () => {
+describe("port-forward operations", () => {
   let transport: StdioClientTransport;
   let client: Client;
   const testPodName = `test-nginx-${generateRandomSHA()}`;
@@ -40,6 +42,55 @@ describe("kubectl operations", () => {
       );
       await client.connect(transport);
       await sleep(1000);
+
+      // Create a test nginx pod
+      const createPodResult = await client.request(
+        {
+          method: "tools/call",
+          params: {
+            name: "create_pod",
+            arguments: {
+              name: testPodName,
+              namespace: testNamespace,
+              template: "nginx",
+            },
+          },
+        },
+        CreatePodResponseSchema
+      );
+
+      expect(createPodResult.content[0].type).toBe("text");
+      const podResult = JSON.parse(createPodResult.content[0].text);
+      expect(podResult.podName).toBe(testPodName);
+
+      // Wait for pod to be running
+      let podRunning = false;
+      const startTime = Date.now();
+
+      while (!podRunning && Date.now() - startTime < 60000) {
+        const podStatus = await client.request(
+          {
+            method: "tools/call",
+            params: {
+              name: "describe_pod",
+              arguments: {
+                name: testPodName,
+                namespace: testNamespace,
+              },
+            },
+          },
+          ListPodsResponseSchema
+        );
+
+        const status = JSON.parse(podStatus.content[0].text);
+        if (status.status?.phase === "Running") {
+          podRunning = true;
+          break;
+        }
+        await sleep(1000);
+      }
+
+      expect(podRunning).toBe(true);
     } catch (e) {
       console.error("Error in beforeEach:", e);
       throw e;
@@ -48,6 +99,24 @@ describe("kubectl operations", () => {
 
   afterEach(async () => {
     try {
+      // Cleanup: Delete the test pod
+      await client
+        .request(
+          {
+            method: "tools/call",
+            params: {
+              name: "delete_pod",
+              arguments: {
+                name: testPodName,
+                namespace: testNamespace,
+                ignoreNotFound: true,
+              },
+            },
+          },
+          DeletePodResponseSchema
+        )
+        .catch(() => {}); // Ignore errors if pod doesn't exist
+
       await transport.close();
       await sleep(1000);
     } catch (e) {
@@ -55,163 +124,64 @@ describe("kubectl operations", () => {
     }
   });
 
-  test("kubectl pod lifecycle", async () => {
-    // Create a test nginx pod using kubectl_create
-    const podManifest = {
-      apiVersion: "v1",
-      kind: "Pod",
-      metadata: {
-        name: testPodName,
-        namespace: testNamespace,
-        labels: {
-          app: "nginx",
-          test: "kubectl-test"
-        }
+  test("port-forward to nginx pod", async () => {
+    // Start port-forward
+    const portForwardResult = await client.request(
+      {
+        method: "tools/call",
+        params: {
+          name: "port_forward",
+          arguments: {
+            resourceType: "pod",
+            resourceName: testPodName,
+            localPort: testPort,
+            targetPort: 80, // nginx default port
+          },
+        },
       },
-      spec: {
-        containers: [
-          {
-            name: "nginx",
-            image: "nginx:latest",
-            ports: [
-              {
-                containerPort: 80,
-                protocol: "TCP"
-              }
-            ]
+      PortForwardResponseSchema
+    );
+
+    expect(portForwardResult.content[0].success).toBe(true);
+    expect(portForwardResult.content[0].message).toBe(
+      "port-forwarding was successful"
+    );
+
+    // Wait a moment for the port-forward to establish
+    await sleep(2000);
+
+    // Test the connection using curl
+    const curlResult = await new Promise((resolve, reject) => {
+      const { exec } = require("child_process");
+      exec(
+        `curl -s http://localhost:${testPort}`,
+        (error: any, stdout: string) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(stdout);
           }
-        ]
-      }
-    };
+        }
+      );
+    });
 
-    console.log(`Creating pod ${testPodName}...`);
-    const createPodResult = await client.request(
+    // Verify we got the nginx welcome page
+    expect(curlResult).toContain("Welcome to nginx!");
+
+    // Clean up the port-forward
+    const portForward = await client.request(
       {
         method: "tools/call",
         params: {
-          name: "kubectl_create",
+          name: "stop_port_forward",
           arguments: {
-            resourceType: "pod",
-            name: testPodName,
-            namespace: testNamespace,
-            manifest: JSON.stringify(podManifest)
+            id: `pod-${testPodName}-${testPort}`,
           },
         },
       },
-      KubectlResponseSchema
+      PortForwardResponseSchema
     );
 
-    expect(createPodResult.content[0].type).toBe("text");
-    
-    // Verify the pod was created by checking for its name in the response
-    const podData = createPodResult.content[0].text;
-    expect(podData).toContain(`name: ${testPodName}`);
-    
-    // Add a delay to ensure the pod is created
-    await sleep(3000);
-    
-    // List pods to verify our pod is included
-    console.log(`Verifying pod ${testPodName} exists...`);
-    const listPodsResult = await client.request(
-      {
-        method: "tools/call",
-        params: {
-          name: "kubectl_list",
-          arguments: {
-            resourceType: "pods",
-            namespace: testNamespace,
-            output: "json"
-          },
-        },
-      },
-      KubectlResponseSchema
-    );
-    
-    const podsList = JSON.parse(listPodsResult.content[0].text);
-    console.log(`Found ${podsList.items?.length || 0} pods in the namespace`);
-    
-    // Defensively check for pod existence 
-    const ourPod = podsList.items?.find((pod: any) => 
-      (pod && pod.name === testPodName) || 
-      (pod && pod.metadata && pod.metadata.name === testPodName)
-    );
-    
-    // Verify our pod exists in the list
-    if (!ourPod) {
-      console.log("Pod not found in pod list, test will fail.");
-      console.log(`Pod names in namespace: ${podsList.items?.map((p: any) => p?.name || p?.metadata?.name).join(', ')}`);
-    } else {
-      console.log(`Pod ${testPodName} found with status: ${ourPod.status || ourPod.status?.phase || 'unknown'}`);
-    }
-    
-    expect(ourPod).toBeDefined();
-    
-    // Get pod details with kubectl_get
-    console.log(`Getting pod ${testPodName} details...`);
-    const getPodResult = await client.request(
-      {
-        method: "tools/call",
-        params: {
-          name: "kubectl_get",
-          arguments: {
-            resourceType: "pod",
-            name: testPodName,
-            namespace: testNamespace,
-            output: "json"
-          },
-        },
-      },
-      KubectlResponseSchema
-    );
-    
-    expect(getPodResult.content[0].type).toBe("text");
-    const podDetails = JSON.parse(getPodResult.content[0].text);
-    
-    // Verify pod details
-    expect(podDetails.metadata?.name || podDetails.name).toBe(testPodName);
-    
-    // Describe the pod with kubectl_describe
-    console.log(`Describing pod ${testPodName}...`);
-    const describePodResult = await client.request(
-      {
-        method: "tools/call",
-        params: {
-          name: "kubectl_describe",
-          arguments: {
-            resourceType: "pod",
-            name: testPodName,
-            namespace: testNamespace
-          },
-        },
-      },
-      KubectlResponseSchema
-    );
-    
-    expect(describePodResult.content[0].type).toBe("text");
-    expect(describePodResult.content[0].text).toContain(testPodName);
-    expect(describePodResult.content[0].text).toContain("nginx:latest");
-    
-    // Cleanup - delete the pod
-    console.log(`Deleting pod ${testPodName}...`);
-    const deletePodResult = await client.request(
-      {
-        method: "tools/call",
-        params: {
-          name: "kubectl_delete",
-          arguments: {
-            resourceType: "pod",
-            name: testPodName,
-            namespace: testNamespace,
-            force: true
-          },
-        },
-      },
-      KubectlResponseSchema
-    );
-    
-    expect(deletePodResult.content[0].type).toBe("text");
-    expect(deletePodResult.content[0].text).toContain(`pod "${testPodName}" force deleted`);
-    
-    console.log("Test completed successfully.");
-  }, 60000); // 60 second timeout
+    expect(portForward.content[0].success).toBe(true);
+  }, 30000); // 30 second timeout
 });
