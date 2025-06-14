@@ -26,18 +26,15 @@ export const kubectlDeleteSchema = {
       },
       labelSelector: {
         type: "string",
-        description: "Delete resources matching this label selector (e.g. 'app=nginx')",
-        optional: true
+        description: "Delete resources matching this label selector (e.g. 'app=nginx')"
       },
       manifest: { 
         type: "string", 
-        description: "YAML manifest defining resources to delete (optional)", 
-        optional: true
+        description: "YAML manifest defining resources to delete (optional)"
       },
       filename: { 
         type: "string", 
-        description: "Path to a YAML file to delete resources from (optional)", 
-        optional: true
+        description: "Path to a YAML file to delete resources from (optional)"
       },
       allNamespaces: {
         type: "boolean",
@@ -51,11 +48,10 @@ export const kubectlDeleteSchema = {
       },
       gracePeriodSeconds: {
         type: "number",
-        description: "Period of time in seconds given to the resource to terminate gracefully",
-        optional: true
+        description: "Period of time in seconds given to the resource to terminate gracefully"
       }
     },
-    required: [],
+    required: ["labelSelector", "manifest", "filename", "gracePeriodSeconds"],
   },
 } as const;
 

@@ -24,23 +24,19 @@ export const kubectlLogsSchema = {
       },
       container: {
         type: "string",
-        description: "Container name (required when pod has multiple containers)",
-        optional: true,
+        description: "Container name (required when pod has multiple containers)"
       },
       tail: {
         type: "number",
-        description: "Number of lines to show from end of logs",
-        optional: true,
+        description: "Number of lines to show from end of logs"
       },
       since: {
         type: "string",
-        description: "Show logs since relative time (e.g. '5s', '2m', '3h')",
-        optional: true,
+        description: "Show logs since relative time (e.g. '5s', '2m', '3h')"
       },
       sinceTime: {
         type: "string",
-        description: "Show logs since absolute time (RFC3339)",
-        optional: true,
+        description: "Show logs since absolute time (RFC3339)"
       },
       timestamps: {
         type: "boolean",
@@ -59,11 +55,10 @@ export const kubectlLogsSchema = {
       },
       labelSelector: {
         type: "string",
-        description: "Filter resources by label selector",
-        optional: true,
+        description: "Filter resources by label selector"
       }
     },
-    required: ["resourceType", "name", "namespace"],
+    required: ["resourceType", "name", "namespace", "container", "tail", "since", "sinceTime", "labelSelector"],
   },
 } as const;
 

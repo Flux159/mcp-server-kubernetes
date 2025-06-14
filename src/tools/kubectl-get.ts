@@ -38,23 +38,20 @@ export const kubectlGetSchema = {
       },
       labelSelector: {
         type: "string",
-        description: "Filter resources by label selector (e.g. 'app=nginx')",
-        optional: true,
+        description: "Filter resources by label selector (e.g. 'app=nginx')"
       },
       fieldSelector: {
         type: "string",
         description:
-          "Filter resources by field selector (e.g. 'metadata.name=my-pod')",
-        optional: true,
+          "Filter resources by field selector (e.g. 'metadata.name=my-pod')"
       },
       sortBy: {
         type: "string",
         description:
-          "Sort events by a field (default: lastTimestamp). Only applicable for events.",
-        optional: true,
+          "Sort events by a field (default: lastTimestamp). Only applicable for events."
       },
     },
-    required: ["resourceType"],
+    required: ["resourceType", "labelSelector", "fieldSelector", "sortBy"],
   },
 } as const;
 

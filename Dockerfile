@@ -1,4 +1,4 @@
-FROM node:22-bookworm-slim AS base
+FROM node:24.2.0-slim AS base
 WORKDIR /usr/local/app
 COPY package.json .
 

@@ -31,18 +31,15 @@ export const kubectlRolloutSchema = {
       },
       revision: {
         type: "number",
-        description: "Revision to rollback to (for undo subcommand)",
-        optional: true
+        description: "Revision to rollback to (for undo subcommand)"
       },
       toRevision: {
         type: "number",
-        description: "Revision to roll back to (for history subcommand)",
-        optional: true
+        description: "Revision to roll back to (for history subcommand)"
       },
       timeout: {
         type: "string",
-        description: "The length of time to wait before giving up (e.g., '30s', '1m', '2m30s')",
-        optional: true
+        description: "The length of time to wait before giving up (e.g., '30s', '1m', '2m30s')"
       },
       watch: {
         type: "boolean",
@@ -50,7 +47,7 @@ export const kubectlRolloutSchema = {
         default: false
       }
     },
-    required: ["subCommand", "resourceType", "name"]
+    required: ["subCommand", "resourceType", "name", "revision", "toRevision", "timeout"]
   }
 };
 

@@ -31,16 +31,14 @@ export const kubectlListSchema = {
       },
       labelSelector: {
         type: "string",
-        description: "Filter resources by label selector (e.g. 'app=nginx')",
-        optional: true
+        description: "Filter resources by label selector (e.g. 'app=nginx')"
       },
       fieldSelector: {
         type: "string",
-        description: "Filter resources by field selector (e.g. 'metadata.name=my-pod')",
-        optional: true
+        description: "Filter resources by field selector (e.g. 'metadata.name=my-pod')"
       }
     },
-    required: ["resourceType"],
+    required: ["resourceType", "labelSelector", "fieldSelector"],
   },
 } as const;
 

@@ -14,45 +14,38 @@ export const kubectlGenericSchema = {
       },
       subCommand: {
         type: "string",
-        description: "Subcommand if applicable (e.g. 'history' for rollout)",
-        optional: true
+        description: "Subcommand if applicable (e.g. 'history' for rollout)"
       },
       resourceType: {
         type: "string",
-        description: "Resource type (e.g. pod, deployment)",
-        optional: true
+        description: "Resource type (e.g. pod, deployment)"
       },
       name: {
         type: "string",
-        description: "Resource name",
-        optional: true
+        description: "Resource name"
       },
       namespace: {
         type: "string",
         description: "Namespace",
-        default: "default",
-        optional: true
+        default: "default"
       },
       outputFormat: {
         type: "string",
         description: "Output format (e.g. json, yaml, wide)",
-        enum: ["json", "yaml", "wide", "name", "custom"],
-        optional: true
+        enum: ["json", "yaml", "wide", "name", "custom"]
       },
       flags: {
         type: "object",
         description: "Command flags as key-value pairs",
-        optional: true,
         additionalProperties: true
       },
       args: {
         type: "array",
         items: { type: "string" },
-        description: "Additional command arguments",
-        optional: true
+        description: "Additional command arguments"
       }
     },
-    required: ["command"]
+    required: ["command", "subCommand", "resourceType", "name", "namespace", "outputFormat", "flags", "args"]
   }
 };
 
