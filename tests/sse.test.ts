@@ -7,11 +7,70 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { KubernetesManager } from "../src/utils/kubernetes-manager.js";
 import { kubectlListSchema, kubectlList } from "../src/tools/kubectl-list.js";
+import express from "express";
+import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+import net from "net";
+
+// Helper function to find an available port
+async function findAvailablePort(startPort: number): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const server = net.createServer();
+    server.listen(startPort, () => {
+      const port = (server.address() as net.AddressInfo)?.port;
+      server.close(() => {
+        resolve(port);
+      });
+    });
+    server.on('error', () => {
+      // Try next port
+      findAvailablePort(startPort + 1).then(resolve).catch(reject);
+    });
+  });
+}
+
+// Modified version of startSSEServer that returns the Express app
+function startSSEServerWithReturn(server: Server): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const app = express();
+    let transports: Array<SSEServerTransport> = [];
+
+    app.get("/sse", async (req, res) => {
+      const transport = new SSEServerTransport("/messages", res);
+      transports.push(transport);
+      await server.connect(transport);
+    });
+
+    app.post("/messages", (req, res) => {
+      const transport = transports.find(
+        (t) => t.sessionId === req.query.sessionId
+      );
+
+      if (transport) {
+        transport.handlePostMessage(req, res);
+      } else {
+        res
+          .status(404)
+          .send("Not found. Must pass valid sessionId as query param.");
+      }
+    });
+
+    const port = parseInt(process.env.PORT || "3000");
+    const serverInstance = app.listen(port, () => {
+      console.log(
+        `mcp-kubernetes-server is listening on port ${port}\nUse the following url to connect to the server:\nhttp://localhost:${port}/sse`
+      );
+      resolve(serverInstance);
+    });
+    
+    serverInstance.on('error', reject);
+  });
+}
 
 describe("SSE transport", () => {
   let server: Server;
   let serverUrl: string;
-  const TEST_PORT = 3001;
+  let actualPort: number;
+  let expressApp: any;
 
   beforeAll(async () => {
     const k8sManager = new KubernetesManager();
@@ -54,14 +113,27 @@ describe("SSE transport", () => {
       }
     });
 
-    // Start the SSE server
-    process.env.PORT = TEST_PORT.toString();
-    startSSEServer(server);
-    serverUrl = `http://localhost:${TEST_PORT}`;
+    // Find an available port instead of using a fixed one
+    actualPort = await findAvailablePort(3001);
+    process.env.PORT = actualPort.toString();
+    
+    // Start the SSE server and get the Express app reference
+    expressApp = await startSSEServerWithReturn(server);
+    serverUrl = `http://localhost:${actualPort}`;
+    
+    // Wait a bit for server to fully start
+    await new Promise(resolve => setTimeout(resolve, 1000));
   });
 
   afterAll(async () => {
-    await server.close();
+    try {
+      if (expressApp && expressApp.close) {
+        expressApp.close();
+      }
+      await server.close();
+    } catch (error) {
+      console.warn("Error during cleanup:", error);
+    }
   });
 
   test("SSE connection and tool call", async () => {

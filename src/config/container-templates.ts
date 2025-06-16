@@ -1,5 +1,5 @@
 import { z } from "zod";
-import * as k8s from "@kubernetes/client-node";
+import type { V1Container } from "@kubernetes/client-node";
 
 // Container template types
 export const ContainerTemplate = z.enum([
@@ -55,7 +55,7 @@ export const CustomContainerConfig = z.object({
 export type CustomContainerConfigType = z.infer<typeof CustomContainerConfig>;
 
 // Container template configurations with resource limits and settings
-export const containerTemplates: Record<string, k8s.V1Container> = {
+export const containerTemplates: Record<string, V1Container> = {
   ubuntu: {
     name: "main",
     image: "ubuntu:latest",

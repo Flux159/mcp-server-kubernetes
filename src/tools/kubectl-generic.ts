@@ -119,8 +119,8 @@ export async function kubectlGeneric(
     // Execute the command (join all args except the first "kubectl" which is used in execSync)
     const command = cmdArgs.slice(1).join(' ');
     try {
-      console.log(`Executing: kubectl ${command}`);
-      const result = execSync(`kubectl ${command}`, { encoding: "utf8" });
+      console.error(`Executing: kubectl ${command}`);
+      const result = execSync(`kubectl ${command}`, { encoding: "utf8", env: { ...process.env, KUBECONFIG: process.env.KUBECONFIG } });
       
       return {
         content: [

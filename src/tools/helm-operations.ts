@@ -93,7 +93,8 @@ const executeHelmCommand = (command: string): string => {
     // Add a generous timeout of 60 seconds for Helm operations
     return execSync(command, { 
       encoding: "utf8",
-      timeout: 60000 // 60 seconds timeout
+      timeout: 60000, // 60 seconds timeout
+      env: { ...process.env, KUBECONFIG: process.env.KUBECONFIG }
     });
   } catch (error: any) {
     throw new Error(`Helm command failed: ${error.message}`);

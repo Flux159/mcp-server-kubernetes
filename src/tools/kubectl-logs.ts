@@ -106,7 +106,7 @@ export async function kubectlLogs(
       
       // Execute the command
       try {
-        const result = execSync(baseCommand, { encoding: "utf8" });
+        const result = execSync(baseCommand, { encoding: "utf8", env: { ...process.env, KUBECONFIG: process.env.KUBECONFIG } });
         return formatLogOutput(name, result);
       } catch (error: any) {
         return handleCommandError(error, `pod ${name}`);
@@ -124,7 +124,7 @@ export async function kubectlLogs(
         // For cronjobs, it's more complex - need to find the job first
         const jobsCommand = `kubectl -n ${namespace} get jobs --selector=job-name=${name} -o jsonpath='{.items[*].metadata.name}'`;
         try {
-          const jobs = execSync(jobsCommand, { encoding: "utf8" }).trim().split(' ');
+          const jobs = execSync(jobsCommand, { encoding: "utf8", env: { ...process.env, KUBECONFIG: process.env.KUBECONFIG } }).trim().split(' ');
           
           if (jobs.length === 0 || (jobs.length === 1 && jobs[0] === '')) {
             return {
@@ -180,7 +180,7 @@ export async function kubectlLogs(
           if (!selectorCommand) {
             throw new Error("Selector command is undefined");
           }
-          const selectorJson = execSync(selectorCommand, { encoding: "utf8" }).trim();
+          const selectorJson = execSync(selectorCommand, { encoding: "utf8", env: { ...process.env, KUBECONFIG: process.env.KUBECONFIG } }).trim();
           const selector = JSON.parse(selectorJson.replace(/'/g, '"'));
           
           // Convert to label selector format
@@ -269,7 +269,7 @@ async function getLabelSelectorLogs(
   try {
     // First, find all pods matching the label selector
     const podsCommand = `kubectl -n ${namespace} get pods --selector=${labelSelector} -o jsonpath='{.items[*].metadata.name}'`;
-    const pods = execSync(podsCommand, { encoding: "utf8" }).trim().split(' ');
+    const pods = execSync(podsCommand, { encoding: "utf8", env: { ...process.env, KUBECONFIG: process.env.KUBECONFIG } }).trim().split(' ');
     
     if (pods.length === 0 || (pods.length === 1 && pods[0] === '')) {
       return {
@@ -306,7 +306,7 @@ async function getLabelSelectorLogs(
       podCommand = addLogOptions(podCommand, input);
       
       try {
-        const logs = execSync(podCommand, { encoding: "utf8" });
+        const logs = execSync(podCommand, { encoding: "utf8", env: { ...process.env, KUBECONFIG: process.env.KUBECONFIG } });
         logsMap[pod] = logs;
       } catch (error: any) {
         logsMap[pod] = `Error: ${error.message}`;

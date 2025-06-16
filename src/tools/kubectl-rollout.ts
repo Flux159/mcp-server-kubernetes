@@ -99,7 +99,8 @@ export async function kubectlRollout(
         // and capture the output until that point
         const result = execSync(command, { 
           encoding: "utf8",
-          timeout: 15000 // Reduced from 30 seconds to 15 seconds
+          timeout: 15000, // Reduced from 30 seconds to 15 seconds
+          env: { ...process.env, KUBECONFIG: process.env.KUBECONFIG }
         });
         
         return {
@@ -111,7 +112,7 @@ export async function kubectlRollout(
           ],
         };
       } else {
-        const result = execSync(command, { encoding: "utf8" });
+        const result = execSync(command, { encoding: "utf8", env: { ...process.env, KUBECONFIG: process.env.KUBECONFIG } });
         
         return {
           content: [

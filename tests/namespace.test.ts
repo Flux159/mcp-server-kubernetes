@@ -61,9 +61,31 @@ describe("kubernetes server operations", () => {
     // NOTE: This test verifies the kubectl_create tool can be called for namespace creation
     // It doesn't actually create a namespace due to potential cluster connectivity issues
     
-    const TEST_NAMESPACE_NAME = "test-namespace-mcp-server";
+    const TEST_NAMESPACE_NAME = "test-namespace-mcp-server-" + Math.random().toString(36).substring(2, 8);
 
     try {
+      // First try to delete any existing namespace with this name to ensure clean state
+      try {
+        await client.request(
+          {
+            method: "tools/call",
+            params: {
+              name: "kubectl_delete",
+              arguments: {
+                resourceType: "namespace",
+                name: TEST_NAMESPACE_NAME,
+              },
+            },
+          },
+          // @ts-ignore - Ignoring type error to get tests running
+          z.any()
+        );
+        // Wait for deletion to complete
+        await sleep(2000);
+      } catch (e) {
+        // Ignore if it doesn't exist
+      }
+
       const result = await client.request(
         {
           method: "tools/call",
@@ -83,6 +105,26 @@ describe("kubernetes server operations", () => {
       expect(result.content[0].type).toBe("text");
       expect(result.content[0].text).toContain("namespace");
       expect(result.content[0].text).toContain(TEST_NAMESPACE_NAME);
+      
+      // Clean up the created namespace
+      try {
+        await client.request(
+          {
+            method: "tools/call",
+            params: {
+              name: "kubectl_delete",
+              arguments: {
+                resourceType: "namespace",
+                name: TEST_NAMESPACE_NAME,
+              },
+            },
+          },
+          // @ts-ignore - Ignoring type error to get tests running
+          z.any()
+        );
+      } catch (e) {
+        console.warn("Failed to clean up namespace:", e);
+      }
     } catch (error) {
       console.log("Error might be expected if cluster connectivity issues exist:", error.message);
       // Skip test if there are connectivity issues

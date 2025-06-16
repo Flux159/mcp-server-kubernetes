@@ -64,7 +64,7 @@ export async function kubectlDescribe(
     
     // Execute the command
     try {
-      const result = execSync(command, { encoding: "utf8" });
+      const result = execSync(command, { encoding: "utf8", env: { ...process.env, KUBECONFIG: process.env.KUBECONFIG } });
       
       return {
         content: [

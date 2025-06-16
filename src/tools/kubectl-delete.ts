@@ -138,7 +138,7 @@ export async function kubectlDelete(
     
     // Execute the command
     try {
-      const result = execSync(command, { encoding: "utf8" });
+      const result = execSync(command, { encoding: "utf8", env: { ...process.env, KUBECONFIG: process.env.KUBECONFIG } });
       
       // Clean up temp file if created
       if (tempFile) {

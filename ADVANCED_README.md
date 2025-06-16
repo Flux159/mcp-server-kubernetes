@@ -1,5 +1,120 @@
 # Advanced README for mcp-server-kubernetes
 
+## Authentication Options
+
+The server supports multiple authentication methods with the following priority order:
+
+1. **In-cluster** (if running in a pod)
+2. **`KUBECONFIG_YAML`** – Full config as YAML string
+3. **`KUBECONFIG_JSON`** – Full config as JSON string
+4. **`K8S_SERVER` + `K8S_TOKEN`** – Minimal env-based config
+5. **`KUBECONFIG_PATH`** – Custom kubeconfig file path
+6. **Default file** – `~/.kube/config`
+
+### Environment Variables
+
+#### Full YAML Configuration
+
+Set your entire kubeconfig as a YAML string:
+
+```bash
+export KUBECONFIG_YAML=$(cat << 'EOF'
+apiVersion: v1
+kind: Config
+clusters:
+- cluster:
+    server: https://your-cluster.example.com
+    certificate-authority-data: LS0tLS1CRUdJTi...
+  name: my-cluster
+users:
+- name: my-user
+  user:
+    token: eyJhbGciOiJSUzI1NiIsImtpZCI6...
+contexts:
+- context:
+    cluster: my-cluster
+    user: my-user
+    namespace: default
+  name: my-context
+current-context: my-context
+EOF
+)
+```
+
+#### Full JSON Configuration
+
+Set your entire kubeconfig as a JSON string:
+
+```bash
+export KUBECONFIG_JSON='{"apiVersion":"v1","kind":"Config","clusters":[{"cluster":{"server":"https://your-cluster.example.com"},"name":"my-cluster"}],"users":[{"name":"my-user","user":{"token":"your-token"}}],"contexts":[{"context":{"cluster":"my-cluster","user":"my-user"},"name":"my-context"}],"current-context":"my-context"}'
+```
+
+#### Minimal Configuration
+
+For simple server + token authentication:
+
+```bash
+export K8S_SERVER='https://your-cluster.example.com'
+export K8S_TOKEN='eyJhbGciOiJSUzI1NiIsImtpZCI6...'
+export K8S_SKIP_TLS_VERIFY='false'  # optional, defaults to false
+```
+
+#### Custom Kubeconfig Path
+
+Specify a custom path to your kubeconfig file:
+
+```bash
+export KUBECONFIG_PATH='/path/to/your/custom/kubeconfig'
+```
+
+#### Context and Namespace Overrides
+
+Override the context and default namespace:
+
+```bash
+export K8S_CONTEXT='my-specific-context'    # Override kubeconfig context
+export K8S_NAMESPACE='my-namespace'         # Override default namespace
+```
+
+These overrides work with any of the authentication methods above.
+
+#### Example: Complete Environment Setup
+
+```bash
+# Option 1: Using minimal config with overrides
+export K8S_SERVER='https://prod-cluster.example.com'
+export K8S_TOKEN='eyJhbGciOiJSUzI1NiIsImtpZCI6...'
+export K8S_CONTEXT='production'
+export K8S_NAMESPACE='my-app'
+export K8S_SKIP_TLS_VERIFY='false'
+
+# Option 2: Using custom kubeconfig path
+export KUBECONFIG_PATH='/etc/kubernetes/prod-config'
+export K8S_CONTEXT='production'
+export K8S_NAMESPACE='my-app'
+```
+
+### Claude Desktop Configuration with Environment Variables
+
+For Claude Desktop with environment variables:
+
+```json
+{
+  "mcpServers": {
+    "kubernetes-prod": {
+      "command": "npx",
+      "args": ["mcp-server-kubernetes"],
+      "env": {
+        "K8S_SERVER": "https://prod-cluster.example.com",
+        "K8S_TOKEN": "your-token-here",
+        "K8S_CONTEXT": "production",
+        "K8S_NAMESPACE": "my-app"
+      }
+    }
+  }
+}
+```
+
 ### Non-Destructive Mode
 
 You can run the server in a non-destructive mode that disables all destructive operations (delete pods, delete deployments, delete namespaces, etc.) by setting the `ALLOW_ONLY_NON_DESTRUCTIVE_TOOLS` environment variable to `true`:

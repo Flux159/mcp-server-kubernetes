@@ -68,7 +68,7 @@ export const listApiResourcesSchema = {
 
 const executeKubectlCommand = (command: string): string => {
   try {
-    return execSync(command, { encoding: "utf8" });
+    return execSync(command, { encoding: "utf8", env: { ...process.env, KUBECONFIG: process.env.KUBECONFIG } });
   } catch (error: any) {
     throw new Error(`Kubectl command failed: ${error.message}`);
   }

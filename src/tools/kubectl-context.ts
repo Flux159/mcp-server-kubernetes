@@ -66,7 +66,7 @@ export async function kubectlContext(
           command += " -o name";
         } else if (output === "custom" || output === "json") {
           // For custom or JSON output, we'll format it ourselves
-          const rawResult = execSync(command, { encoding: "utf8" });
+          const rawResult = execSync(command, { encoding: "utf8", env: { ...process.env, KUBECONFIG: process.env.KUBECONFIG } });
           
           // Parse the tabular output from kubectl
           const lines = rawResult.trim().split("\n");
@@ -102,7 +102,7 @@ export async function kubectlContext(
         }
         
         // Execute the command for non-json outputs
-        result = execSync(command, { encoding: "utf8" });
+        result = execSync(command, { encoding: "utf8", env: { ...process.env, KUBECONFIG: process.env.KUBECONFIG } });
         break;
         
       case "get":
@@ -111,11 +111,11 @@ export async function kubectlContext(
         
         // Execute the command
         try {
-          const currentContext = execSync(command, { encoding: "utf8" }).trim();
+          const currentContext = execSync(command, { encoding: "utf8", env: { ...process.env, KUBECONFIG: process.env.KUBECONFIG } }).trim();
           
           if (detailed) {
             // For detailed context info, we need to use get-contexts and filter
-            const allContextsOutput = execSync("kubectl config get-contexts", { encoding: "utf8" });
+            const allContextsOutput = execSync("kubectl config get-contexts", { encoding: "utf8", env: { ...process.env, KUBECONFIG: process.env.KUBECONFIG } });
             
             // Parse the tabular output from kubectl
             const lines = allContextsOutput.trim().split("\n");
@@ -201,7 +201,7 @@ export async function kubectlContext(
         
         // First check if the context exists
         try {
-          const allContextsOutput = execSync("kubectl config get-contexts -o name", { encoding: "utf8" });
+          const allContextsOutput = execSync("kubectl config get-contexts -o name", { encoding: "utf8", env: { ...process.env, KUBECONFIG: process.env.KUBECONFIG } });
           const availableContexts = allContextsOutput.trim().split("\n");
           
           // Extract the short name from the ARN if needed
@@ -225,7 +225,7 @@ export async function kubectlContext(
           command = `kubectl config use-context "${contextName}"`;
           
           // Execute the command
-          result = execSync(command, { encoding: "utf8" });
+          result = execSync(command, { encoding: "utf8", env: { ...process.env, KUBECONFIG: process.env.KUBECONFIG } });
           
           // For tests to pass, we need to return the original name format that was passed in
           return {

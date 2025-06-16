@@ -1,5 +1,4 @@
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
-import * as k8s from "@kubernetes/client-node";
 import { KubernetesManager } from "../types.js";
 
 export const getResourceHandlers = (k8sManager: KubernetesManager) => ({
@@ -49,13 +48,13 @@ export const getResourceHandlers = (k8sManager: KubernetesManager) => ({
       const isNodes = parts[0] === "nodes";
       if ((isNamespaces || isNodes) && parts.length === 1) {
         const fn = isNodes ? "listNode" : "listNamespace";
-        const { body } = await k8sManager.getCoreApi()[fn]();
+        const { items } = await k8sManager.getCoreApi()[fn]();
         return {
           contents: [
             {
               uri: request.params.uri,
               mimeType: "application/json",
-              text: JSON.stringify(body.items, null, 2),
+              text: JSON.stringify(items, null, 2),
             },
           ],
         };
@@ -65,43 +64,43 @@ export const getResourceHandlers = (k8sManager: KubernetesManager) => ({
 
       switch (resourceType) {
         case "pods": {
-          const { body } = await k8sManager
+          const { items } = await k8sManager
             .getCoreApi()
-            .listNamespacedPod(namespace);
+            .listNamespacedPod({ namespace });
           return {
             contents: [
               {
                 uri: request.params.uri,
                 mimeType: "application/json",
-                text: JSON.stringify(body.items, null, 2),
+                text: JSON.stringify(items, null, 2),
               },
             ],
           };
         }
         case "deployments": {
-          const { body } = await k8sManager
+          const { items } = await k8sManager
             .getAppsApi()
-            .listNamespacedDeployment(namespace);
+            .listNamespacedDeployment({ namespace });
           return {
             contents: [
               {
                 uri: request.params.uri,
                 mimeType: "application/json",
-                text: JSON.stringify(body.items, null, 2),
+                text: JSON.stringify(items, null, 2),
               },
             ],
           };
         }
         case "services": {
-          const { body } = await k8sManager
+          const { items } = await k8sManager
             .getCoreApi()
-            .listNamespacedService(namespace);
+            .listNamespacedService({ namespace });
           return {
             contents: [
               {
                 uri: request.params.uri,
                 mimeType: "application/json",
-                text: JSON.stringify(body.items, null, 2),
+                text: JSON.stringify(items, null, 2),
               },
             ],
           };

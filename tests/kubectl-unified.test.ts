@@ -831,9 +831,30 @@ spec:
   
   test("kubectl_create creates a CronJob using subcommand", async () => {
     const testNamespaceName = "kubectl-cronjob-direct-" + Math.random().toString(36).substring(2, 7);
-    const cronJobName = "test-cronjob-direct";
+    const cronJobName = "test-cronjob-direct-" + Math.random().toString(36).substring(2, 7);
     
     try {
+      // First delete any existing cronjob with this name to ensure clean state
+      try {
+        await client.request(
+          {
+            method: "tools/call",
+            params: {
+              name: "kubectl_delete",
+              arguments: {
+                resourceType: "cronjob",
+                name: cronJobName,
+                namespace: testNamespaceName
+              },
+            },
+          },
+          // @ts-ignore - Ignoring type error for now to get tests running
+          z.any()
+        );
+      } catch (e) {
+        // Ignore if it doesn't exist
+      }
+      
       // First create namespace
       await retry(async () => {
         await client.request(
