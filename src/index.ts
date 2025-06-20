@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+
 import {
   installHelmChart,
   installHelmChartSchema,
@@ -54,6 +55,19 @@ import {
   kubectlGenericSchema,
 } from "./tools/kubectl-generic.js";
 import { kubectlPatch, kubectlPatchSchema } from "./tools/kubectl-patch.js";
+import { kubectlRollout, kubectlRolloutSchema } from "./tools/kubectl-rollout.js";
+import { k8sSecurityCheck } from "./tools/k8s_security_check.js";
+
+// Define k8s security check schema
+const k8sSecurityCheckSchema = {
+  name: "k8s_security_check",
+  description: "Perform comprehensive security checks on Kubernetes cluster including privileged pods, RBAC permissions, exposed secrets, and missing network policies",
+  inputSchema: {
+    type: "object",
+    properties: {},
+    required: [],
+  },
+};
 import {
   kubectlRollout,
   kubectlRolloutSchema,
@@ -109,6 +123,9 @@ const allTools = [
 
   // Generic kubectl command
   kubectlGenericSchema,
+  
+  // Security operations
+  k8sSecurityCheckSchema,
 ];
 
 const k8sManager = new KubernetesManager();
@@ -449,6 +466,32 @@ server.setRequestHandler(
               resourceType?: string;
             }
           );
+        }
+
+        case "k8s_security_check": {
+          const findings = k8sSecurityCheck();
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(
+                  {
+                    success: true,
+                    findings: findings,
+                    summary: {
+                      total: findings.length,
+                      privilegedPods: findings.filter(f => f.type === 'Privileged Pod').length,
+                      permissiveRBAC: findings.filter(f => f.type === 'Permissive RBAC').length,
+                      exposedSecrets: findings.filter(f => f.type === 'Exposed Secret').length,
+                      missingNetworkPolicies: findings.filter(f => f.type === 'Missing NetworkPolicy').length,
+                    }
+                  },
+                  null,
+                  2
+                ),
+              },
+            ],
+          };
         }
 
         default:
