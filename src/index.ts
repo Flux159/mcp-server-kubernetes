@@ -59,6 +59,7 @@ import {
   kubectlRolloutSchema,
 } from "./tools/kubectl-rollout.js";
 import { registerPromptHandlers } from "./prompts/index.js";
+import { ping, pingSchema } from "./tools/ping.js";
 
 // Check if non-destructive tools only mode is enabled
 const nonDestructiveTools =
@@ -109,6 +110,9 @@ const allTools = [
 
   // Generic kubectl command
   kubectlGenericSchema,
+
+  // Ping utility
+  pingSchema,
 ];
 
 const k8sManager = new KubernetesManager();
@@ -149,7 +153,6 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         (tool) => !destructiveTools.some((dt) => dt.name === tool.name)
       )
     : allTools;
-
   return { tools };
 });
 
@@ -449,6 +452,10 @@ server.setRequestHandler(
               resourceType?: string;
             }
           );
+        }
+
+        case "ping": {
+          return await ping();
         }
 
         default:

@@ -83,6 +83,7 @@ npx mcp-chat --config "%APPDATA%\Claude\claude_desktop_config.json"
   - Update field(s) of a resource with `kubectl_patch`
   - Manage deployment rollouts with `kubectl_rollout`
   - Execute any kubectl command with `kubectl_generic`
+  - Verify connection with `ping`
 - [x] Advanced operations
   - Scale deployments with `kubectl_scale` (replaces legacy `scale_deployment`)
   - Port forward to pods and services with `port_forward`

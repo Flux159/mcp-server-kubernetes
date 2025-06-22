@@ -1,8 +1,8 @@
 // Import required test frameworks and SDK components
-import { expect, test, describe, beforeEach, afterEach } from "vitest";
+import { expect, test, describe, beforeEach, afterEach, vi } from "vitest";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { ListToolsResponseSchema } from "../src/models/tool-models.js";
+import { ListToolsResponseSchema, PingResponseSchema } from "../src/models/tool-models.js";
 import {
   ListPodsResponseSchema,
   ListNamespacesResponseSchema,
@@ -19,6 +19,7 @@ import { ScaleDeploymentResponseSchema } from "../src/models/response-schemas.js
 import { KubectlResponseSchema } from "../src/models/kubectl-models.js";
 import { z } from "zod";
 import { asResponseSchema } from "./context-helper";
+import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 
 /**
  * Utility function to create a promise that resolves after specified milliseconds
@@ -56,10 +57,14 @@ describe("kubernetes server operations", () => {
   beforeEach(async () => {
     try {
       transport = new StdioClientTransport({
-        command: "bun",
-        args: ["src/index.ts"],
+        command: "node",
+        args: ["dist/index.js"],
         stderr: "pipe",
+        stdout: "pipe",
+        log: (...args) => console.log("SERVER LOG:", ...args),
+        error: (...args) => console.error("SERVER ERROR:", ...args),
       });
+      // console.log("StdioClientTransport initialized."); // Removed for debugging
 
       client = new Client(
         {
@@ -73,9 +78,9 @@ describe("kubernetes server operations", () => {
       await client.connect(transport);
       // Wait for connection to be fully established
       await sleep(1000);
-    } catch (e) {
-      console.error("Error in beforeEach:", e);
-      throw e;
+
+    } catch (error) {
+      console.error("Error in beforeEach:", error);
     }
   });
 
@@ -863,5 +868,22 @@ describe("kubernetes server operations", () => {
         await sleep(waitTime);
       }
     }
+  });
+
+  /**
+   * Test case: Verify ping support
+   * Ensures that the server responds to ping requests.
+   */
+  test("ping support", async () => {
+    console.log("Pinging server...");
+    const pingResult = await client.request(
+      {
+        jsonrpc: "2.0",
+        id: "123", // Example ID
+        method: "ping",
+      },
+      asResponseSchema(PingResponseSchema)
+    );
+    expect(pingResult).toEqual({});
   });
 });

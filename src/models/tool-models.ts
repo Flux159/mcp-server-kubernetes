@@ -11,4 +11,6 @@ export const ListToolsResponseSchema = z.object({
   tools: z.array(ToolSchema),
 });
 
+export const PingResponseSchema = z.object({});
+
 export type K8sTool = z.infer<typeof ToolSchema>;
