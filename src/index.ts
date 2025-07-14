@@ -10,6 +10,14 @@ import {
   uninstallHelmChartSchema,
 } from "./tools/helm-operations.js";
 import {
+  helmTemplateApply,
+  helmTemplateApplySchema,
+} from "./tools/helm-template-apply.js";
+import {
+  helmTemplateUninstall,
+  helmTemplateUninstallSchema,
+} from "./tools/helm-template-uninstall.js";
+import {
   explainResource,
   explainResourceSchema,
   listApiResources,
@@ -112,6 +120,8 @@ const allTools = [
   installHelmChartSchema,
   upgradeHelmChartSchema,
   uninstallHelmChartSchema,
+  helmTemplateApplySchema,
+  helmTemplateUninstallSchema,
 
   // Port forwarding
   PortForwardSchema,
@@ -414,6 +424,32 @@ server.setRequestHandler(
               repo: string;
               namespace: string;
               values?: Record<string, any>;
+            }
+          );
+        }
+
+        case "helm_template_apply": {
+          return await helmTemplateApply(
+            input as {
+              name: string;
+              chart: string;
+              repo?: string;
+              namespace: string;
+              values?: Record<string, any>;
+              valuesFile?: string;
+              createNamespace?: boolean;
+            }
+          );
+        }
+
+        case "helm_template_uninstall": {
+          return await helmTemplateUninstall(
+            input as {
+              name: string;
+              chart: string;
+              namespace: string;
+              values?: Record<string, any>;
+              valuesFile?: string;
             }
           );
         }
