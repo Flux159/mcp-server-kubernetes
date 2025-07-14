@@ -94,6 +94,8 @@ npx mcp-chat --config "%APPDATA%\Claude\claude_desktop_config.json"
     - Template-based uninstallation (`helm_template_uninstall`) to bypass authentication issues
   - Pod cleanup operations
     - Clean up problematic pods (`cleanup_pods`) in states: Evicted, ContainerStatusUnknown, Completed, Error, ImagePullBackOff, CrashLoopBackOff
+  - Node management operations
+    - Cordoning, draining, and uncordoning nodes (`node_management`) for maintenance and scaling operations
 - [x] Troubleshooting Prompt (`k8s-diagnose`)
   - Guides through a systematic Kubernetes troubleshooting flow for pods based on a keyword and optional namespace.
 - [x] Non-destructive mode for read and create/update-only access to clusters
@@ -211,6 +213,7 @@ The following destructive operations are disabled:
 - `uninstall_helm_chart`: Uninstalling Helm charts
 - `cleanup`: Cleanup of managed resources
 - `cleanup_pods`: Cleaning up problematic pods
+- `node_management`: Node management operations (can drain nodes)
 - `kubectl_generic`: General kubectl command access (may include destructive operations)
 
 ### Helm Template Apply Tool
@@ -358,6 +361,104 @@ The tool identifies pods in the following states:
 - **Force deletion**: Uses `--force --grace-period=0` for immediate deletion
 - **State-specific targeting**: Only targets pods in specific problematic states
 - **Error handling**: Continues deletion even if individual pods fail to delete
+
+### Node Management Tool
+
+The `node_management` tool provides comprehensive node management capabilities for Kubernetes clusters, including cordoning, draining, and uncordoning operations. This is essential for cluster maintenance, scaling, and troubleshooting.
+
+#### Operations Available
+
+- **`list`**: List all nodes with their status and schedulability
+- **`cordon`**: Mark a node as unschedulable (no new pods will be scheduled)
+- **`drain`**: Safely evict all pods from a node and mark it as unschedulable
+- **`uncordon`**: Mark a node as schedulable again
+
+#### Usage Examples
+
+**1. List all nodes:**
+```json
+{
+  "name": "node_management",
+  "arguments": {
+    "operation": "list"
+  }
+}
+```
+
+**2. Cordon a node (mark as unschedulable):**
+```json
+{
+  "name": "node_management",
+  "arguments": {
+    "operation": "cordon",
+    "nodeName": "worker-node-1"
+  }
+}
+```
+
+**3. Drain a node (dry run first):**
+```json
+{
+  "name": "node_management",
+  "arguments": {
+    "operation": "drain",
+    "nodeName": "worker-node-1",
+    "dryRun": true
+  }
+}
+```
+
+**4. Drain a node (with confirmation):**
+```json
+{
+  "name": "node_management",
+  "arguments": {
+    "operation": "drain",
+    "nodeName": "worker-node-1",
+    "dryRun": false,
+    "confirmDrain": true,
+    "force": true,
+    "ignoreDaemonsets": true,
+    "timeout": "5m"
+  }
+}
+```
+
+**5. Uncordon a node:**
+```json
+{
+  "name": "node_management",
+  "arguments": {
+    "operation": "uncordon",
+    "nodeName": "worker-node-1"
+  }
+}
+```
+
+#### Drain Operation Parameters
+
+- `force`: Force the operation even if there are pods not managed by controllers
+- `gracePeriod`: Period of time in seconds given to each pod to terminate gracefully
+- `deleteLocalData`: Delete local data even if emptyDir volumes are used
+- `ignoreDaemonsets`: Ignore DaemonSet-managed pods (default: true)
+- `timeout`: The length of time to wait before giving up (e.g., '5m', '1h')
+- `dryRun`: Show what would be done without actually doing it
+- `confirmDrain`: Explicit confirmation to drain the node (required for actual draining)
+
+#### Safety Features
+
+- **Dry run by default**: Drain operations default to dry run to show what would be done
+- **Explicit confirmation**: Drain operations require `confirmDrain=true` to proceed
+- **Status tracking**: Shows node status before and after operations
+- **Timeout protection**: Configurable timeouts to prevent hanging operations
+- **Graceful termination**: Configurable grace periods for pod termination
+
+#### Common Use Cases
+
+1. **Cluster Maintenance**: Cordon nodes before maintenance, drain them, perform maintenance, then uncordon
+2. **Node Scaling**: Drain nodes before removing them from the cluster
+3. **Troubleshooting**: Isolate problematic nodes by cordoning them
+4. **Resource Management**: Drain nodes to redistribute workload
 
 For additional advanced features, see the [ADVANCED_README.md](ADVANCED_README.md).
 
