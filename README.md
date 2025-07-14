@@ -91,6 +91,9 @@ npx mcp-chat --config "%APPDATA%\Claude\claude_desktop_config.json"
     - Install, upgrade, and uninstall charts
     - Support for custom values, repositories, and versions
     - Template-based installation (`helm_template_apply`) to bypass authentication issues
+    - Template-based uninstallation (`helm_template_uninstall`) to bypass authentication issues
+  - Pod cleanup operations
+    - Clean up problematic pods (`cleanup_pods`) in states: Evicted, ContainerStatusUnknown, Completed, Error, ImagePullBackOff, CrashLoopBackOff
 - [x] Troubleshooting Prompt (`k8s-diagnose`)
   - Guides through a systematic Kubernetes troubleshooting flow for pods based on a keyword and optional namespace.
 - [x] Non-destructive mode for read and create/update-only access to clusters
@@ -196,7 +199,7 @@ All read-only and resource creation/update operations remain available:
 
 - Resource Information: `kubectl_get`, `kubectl_describe`, `kubectl_logs`, `explain_resource`, `list_api_resources`
 - Resource Creation/Modification: `kubectl_apply`, `kubectl_create`, `kubectl_scale`, `kubectl_patch`, `kubectl_rollout`
-- Helm Operations: `install_helm_chart`, `upgrade_helm_chart`, `helm_template_apply`
+- Helm Operations: `install_helm_chart`, `upgrade_helm_chart`, `helm_template_apply`, `helm_template_uninstall`
 - Connectivity: `port_forward`, `stop_port_forward`
 - Context Management: `kubectl_context`
 
@@ -207,6 +210,7 @@ The following destructive operations are disabled:
 - `kubectl_delete`: Deleting any Kubernetes resources
 - `uninstall_helm_chart`: Uninstalling Helm charts
 - `cleanup`: Cleanup of managed resources
+- `cleanup_pods`: Cleaning up problematic pods
 - `kubectl_generic`: General kubectl command access (may include destructive operations)
 
 ### Helm Template Apply Tool
@@ -255,6 +259,105 @@ kubectl apply -f events-exporter.yaml -n kube-event-exporter
 - `values`: Chart values as an object (optional)
 - `valuesFile`: Path to values.yaml file (optional, alternative to values object)
 - `createNamespace`: Whether to create the namespace if it doesn't exist (default: true)
+
+### Pod Cleanup Tool
+
+The `cleanup_pods` tool helps you identify and optionally force delete pods in problematic states. This is useful for cleaning up stuck or failed pods that are consuming cluster resources.
+
+#### Problematic Pod States
+
+The tool identifies pods in the following states:
+- **Evicted**: Pods that have been evicted due to resource constraints
+- **ContainerStatusUnknown**: Pods with unknown container status
+- **Completed**: Pods that have completed their execution
+- **Error**: Pods that have encountered errors
+- **ImagePullBackOff**: Pods that cannot pull their container images
+- **CrashLoopBackOff**: Pods that keep crashing and restarting
+
+#### Usage Examples
+
+**1. List problematic pods (dry run - default):**
+```json
+{
+  "name": "cleanup_pods",
+  "arguments": {
+    "namespace": "default",
+    "dryRun": true,
+    "forceDelete": false
+  }
+}
+```
+
+**2. Force delete problematic pods (requires confirmation):**
+```json
+{
+  "name": "cleanup_pods",
+  "arguments": {
+    "namespace": "default",
+    "dryRun": false,
+    "forceDelete": true,
+    "confirmDelete": true
+  }
+}
+```
+
+**3. Clean up pods in all namespaces:**
+```json
+{
+  "name": "cleanup_pods",
+  "arguments": {
+    "namespace": "default",
+    "allNamespaces": true,
+    "dryRun": false,
+    "forceDelete": true,
+    "confirmDelete": true
+  }
+}
+```
+
+#### Workflow
+
+1. **First, list the pods** (dry run):
+   ```json
+   {
+     "name": "cleanup_pods",
+     "arguments": {
+       "namespace": "default"
+     }
+   }
+   ```
+
+2. **Review the list** of problematic pods in the response
+
+3. **If you want to delete them**, call again with confirmation:
+   ```json
+   {
+     "name": "cleanup_pods",
+     "arguments": {
+       "namespace": "default",
+       "dryRun": false,
+       "forceDelete": true,
+       "confirmDelete": true
+     }
+   }
+   ```
+
+#### Parameters
+
+- `namespace`: Kubernetes namespace to clean up
+- `dryRun`: Show list of problematic pods without deleting (default: true)
+- `forceDelete`: Force delete the problematic pods (default: false)
+- `allNamespaces`: Clean up pods in all namespaces (default: false)
+- `confirmDelete`: Explicit confirmation to delete pods (default: false). Must be set to true along with forceDelete=true
+
+#### Safety Features
+
+- **Default dry run**: The tool defaults to `dryRun=true` to show you what would be deleted before actually deleting
+- **Two-step confirmation**: Requires both `forceDelete=true` AND `confirmDelete=true` to actually delete pods
+- **Clear workflow**: First lists pods, then requires explicit confirmation to delete
+- **Force deletion**: Uses `--force --grace-period=0` for immediate deletion
+- **State-specific targeting**: Only targets pods in specific problematic states
+- **Error handling**: Continues deletion even if individual pods fail to delete
 
 For additional advanced features, see the [ADVANCED_README.md](ADVANCED_README.md).
 

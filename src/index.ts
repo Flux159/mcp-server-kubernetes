@@ -18,6 +18,10 @@ import {
   helmTemplateUninstallSchema,
 } from "./tools/helm-template-uninstall.js";
 import {
+  cleanupPods,
+  cleanupPodsSchema,
+} from "./tools/cleanup-pods.js";
+import {
   explainResource,
   explainResourceSchema,
   listApiResources,
@@ -92,6 +96,7 @@ const destructiveTools = [
   uninstallHelmChartSchema,
   cleanupSchema, // Cleanup is also destructive as it deletes resources
   kubectlGenericSchema, // Generic kubectl command can perform destructive operations
+  cleanupPodsSchema, // Cleanup pods can delete pods
 ];
 
 // Get all available tools
@@ -122,6 +127,7 @@ const allTools = [
   uninstallHelmChartSchema,
   helmTemplateApplySchema,
   helmTemplateUninstallSchema,
+  cleanupPodsSchema,
 
   // Port forwarding
   PortForwardSchema,
@@ -450,6 +456,18 @@ server.setRequestHandler(
               namespace: string;
               values?: Record<string, any>;
               valuesFile?: string;
+            }
+          );
+        }
+
+        case "cleanup_pods": {
+          return await cleanupPods(
+            input as {
+              namespace: string;
+              dryRun?: boolean;
+              forceDelete?: boolean;
+              allNamespaces?: boolean;
+              confirmDelete?: boolean;
             }
           );
         }
