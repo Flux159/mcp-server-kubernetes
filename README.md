@@ -90,6 +90,12 @@ npx mcp-chat --config "%APPDATA%\Claude\claude_desktop_config.json"
   - Run Helm operations
     - Install, upgrade, and uninstall charts
     - Support for custom values, repositories, and versions
+    - Template-based installation (`helm_template_apply`) to bypass authentication issues
+    - Template-based uninstallation (`helm_template_uninstall`) to bypass authentication issues
+  - Pod cleanup operations
+    - Clean up problematic pods (`cleanup_pods`) in states: Evicted, ContainerStatusUnknown, Completed, Error, ImagePullBackOff, CrashLoopBackOff
+  - Node management operations
+    - Cordoning, draining, and uncordoning nodes (`node_management`) for maintenance and scaling operations
 - [x] Troubleshooting Prompt (`k8s-diagnose`)
   - Guides through a systematic Kubernetes troubleshooting flow for pods based on a keyword and optional namespace.
 - [x] Non-destructive mode for read and create/update-only access to clusters
@@ -195,7 +201,7 @@ All read-only and resource creation/update operations remain available:
 
 - Resource Information: `kubectl_get`, `kubectl_describe`, `kubectl_logs`, `explain_resource`, `list_api_resources`
 - Resource Creation/Modification: `kubectl_apply`, `kubectl_create`, `kubectl_scale`, `kubectl_patch`, `kubectl_rollout`
-- Helm Operations: `install_helm_chart`, `upgrade_helm_chart`
+- Helm Operations: `install_helm_chart`, `upgrade_helm_chart`, `helm_template_apply`, `helm_template_uninstall`
 - Connectivity: `port_forward`, `stop_port_forward`
 - Context Management: `kubectl_context`
 
@@ -206,7 +212,253 @@ The following destructive operations are disabled:
 - `kubectl_delete`: Deleting any Kubernetes resources
 - `uninstall_helm_chart`: Uninstalling Helm charts
 - `cleanup`: Cleanup of managed resources
+- `cleanup_pods`: Cleaning up problematic pods
+- `node_management`: Node management operations (can drain nodes)
 - `kubectl_generic`: General kubectl command access (may include destructive operations)
+
+### Helm Template Apply Tool
+
+The `helm_template_apply` tool provides an alternative way to install Helm charts that bypasses authentication issues commonly encountered with certain Kubernetes configurations. This tool is particularly useful when you encounter errors like:
+
+```
+WARNING: Kubernetes configuration file is group-readable. This is insecure.
+Error: INSTALLATION FAILED: Kubernetes cluster unreachable: exec plugin: invalid apiVersion "client.authentication.k8s.io/v1alpha1"
+```
+
+Instead of using `helm install` directly, this tool:
+
+1. Uses `helm template` to generate YAML manifests from the Helm chart
+2. Applies the generated YAML using `kubectl apply`
+3. Handles namespace creation and cleanup automatically
+
+#### Usage Example
+
+```json
+{
+  "name": "helm_template_apply",
+  "arguments": {
+    "name": "events-exporter",
+    "chart": ".",
+    "namespace": "kube-event-exporter",
+    "valuesFile": "values.yaml",
+    "createNamespace": true
+  }
+}
+```
+
+This is equivalent to running:
+```bash
+helm template events-exporter . -f values.yaml > events-exporter.yaml
+kubectl create namespace kube-event-exporter
+kubectl apply -f events-exporter.yaml -n kube-event-exporter
+```
+
+#### Parameters
+
+- `name`: Release name for the Helm chart
+- `chart`: Chart name or path to chart directory
+- `repo`: Chart repository URL (optional if using local chart path)
+- `namespace`: Kubernetes namespace to deploy to
+- `values`: Chart values as an object (optional)
+- `valuesFile`: Path to values.yaml file (optional, alternative to values object)
+- `createNamespace`: Whether to create the namespace if it doesn't exist (default: true)
+
+### Pod Cleanup Tool
+
+The `cleanup_pods` tool helps you identify and optionally force delete pods in problematic states. This is useful for cleaning up stuck or failed pods that are consuming cluster resources.
+
+#### Problematic Pod States
+
+The tool identifies pods in the following states:
+- **Evicted**: Pods that have been evicted due to resource constraints
+- **ContainerStatusUnknown**: Pods with unknown container status
+- **Completed**: Pods that have completed their execution
+- **Error**: Pods that have encountered errors
+- **ImagePullBackOff**: Pods that cannot pull their container images
+- **CrashLoopBackOff**: Pods that keep crashing and restarting
+
+#### Usage Examples
+
+**1. List problematic pods (dry run - default):**
+```json
+{
+  "name": "cleanup_pods",
+  "arguments": {
+    "namespace": "default",
+    "dryRun": true,
+    "forceDelete": false
+  }
+}
+```
+
+**2. Force delete problematic pods (requires confirmation):**
+```json
+{
+  "name": "cleanup_pods",
+  "arguments": {
+    "namespace": "default",
+    "dryRun": false,
+    "forceDelete": true,
+    "confirmDelete": true
+  }
+}
+```
+
+**3. Clean up pods in all namespaces:**
+```json
+{
+  "name": "cleanup_pods",
+  "arguments": {
+    "namespace": "default",
+    "allNamespaces": true,
+    "dryRun": false,
+    "forceDelete": true,
+    "confirmDelete": true
+  }
+}
+```
+
+#### Workflow
+
+1. **First, list the pods** (dry run):
+   ```json
+   {
+     "name": "cleanup_pods",
+     "arguments": {
+       "namespace": "default"
+     }
+   }
+   ```
+
+2. **Review the list** of problematic pods in the response
+
+3. **If you want to delete them**, call again with confirmation:
+   ```json
+   {
+     "name": "cleanup_pods",
+     "arguments": {
+       "namespace": "default",
+       "dryRun": false,
+       "forceDelete": true,
+       "confirmDelete": true
+     }
+   }
+   ```
+
+#### Parameters
+
+- `namespace`: Kubernetes namespace to clean up
+- `dryRun`: Show list of problematic pods without deleting (default: true)
+- `forceDelete`: Force delete the problematic pods (default: false)
+- `allNamespaces`: Clean up pods in all namespaces (default: false)
+- `confirmDelete`: Explicit confirmation to delete pods (default: false). Must be set to true along with forceDelete=true
+
+#### Safety Features
+
+- **Default dry run**: The tool defaults to `dryRun=true` to show you what would be deleted before actually deleting
+- **Two-step confirmation**: Requires both `forceDelete=true` AND `confirmDelete=true` to actually delete pods
+- **Clear workflow**: First lists pods, then requires explicit confirmation to delete
+- **Force deletion**: Uses `--force --grace-period=0` for immediate deletion
+- **State-specific targeting**: Only targets pods in specific problematic states
+- **Error handling**: Continues deletion even if individual pods fail to delete
+
+### Node Management Tool
+
+The `node_management` tool provides comprehensive node management capabilities for Kubernetes clusters, including cordoning, draining, and uncordoning operations. This is essential for cluster maintenance, scaling, and troubleshooting.
+
+#### Operations Available
+
+- **`list`**: List all nodes with their status and schedulability
+- **`cordon`**: Mark a node as unschedulable (no new pods will be scheduled)
+- **`drain`**: Safely evict all pods from a node and mark it as unschedulable
+- **`uncordon`**: Mark a node as schedulable again
+
+#### Usage Examples
+
+**1. List all nodes:**
+```json
+{
+  "name": "node_management",
+  "arguments": {
+    "operation": "list"
+  }
+}
+```
+
+**2. Cordon a node (mark as unschedulable):**
+```json
+{
+  "name": "node_management",
+  "arguments": {
+    "operation": "cordon",
+    "nodeName": "worker-node-1"
+  }
+}
+```
+
+**3. Drain a node (dry run first):**
+```json
+{
+  "name": "node_management",
+  "arguments": {
+    "operation": "drain",
+    "nodeName": "worker-node-1",
+    "dryRun": true
+  }
+}
+```
+
+**4. Drain a node (with confirmation):**
+```json
+{
+  "name": "node_management",
+  "arguments": {
+    "operation": "drain",
+    "nodeName": "worker-node-1",
+    "dryRun": false,
+    "confirmDrain": true,
+    "force": true,
+    "ignoreDaemonsets": true,
+    "timeout": "5m"
+  }
+}
+```
+
+**5. Uncordon a node:**
+```json
+{
+  "name": "node_management",
+  "arguments": {
+    "operation": "uncordon",
+    "nodeName": "worker-node-1"
+  }
+}
+```
+
+#### Drain Operation Parameters
+
+- `force`: Force the operation even if there are pods not managed by controllers
+- `gracePeriod`: Period of time in seconds given to each pod to terminate gracefully
+- `deleteLocalData`: Delete local data even if emptyDir volumes are used
+- `ignoreDaemonsets`: Ignore DaemonSet-managed pods (default: true)
+- `timeout`: The length of time to wait before giving up (e.g., '5m', '1h')
+- `dryRun`: Show what would be done without actually doing it
+- `confirmDrain`: Explicit confirmation to drain the node (required for actual draining)
+
+#### Safety Features
+
+- **Dry run by default**: Drain operations default to dry run to show what would be done
+- **Explicit confirmation**: Drain operations require `confirmDrain=true` to proceed
+- **Status tracking**: Shows node status before and after operations
+- **Timeout protection**: Configurable timeouts to prevent hanging operations
+- **Graceful termination**: Configurable grace periods for pod termination
+
+#### Common Use Cases
+
+1. **Cluster Maintenance**: Cordon nodes before maintenance, drain them, perform maintenance, then uncordon
+2. **Node Scaling**: Drain nodes before removing them from the cluster
+3. **Troubleshooting**: Isolate problematic nodes by cordoning them
+4. **Resource Management**: Drain nodes to redistribute workload
 
 For additional advanced features, see the [ADVANCED_README.md](ADVANCED_README.md).
 

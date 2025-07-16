@@ -10,6 +10,22 @@ import {
   uninstallHelmChartSchema,
 } from "./tools/helm-operations.js";
 import {
+  helmTemplateApply,
+  helmTemplateApplySchema,
+} from "./tools/helm-template-apply.js";
+import {
+  helmTemplateUninstall,
+  helmTemplateUninstallSchema,
+} from "./tools/helm-template-uninstall.js";
+import {
+  cleanupPods,
+  cleanupPodsSchema,
+} from "./tools/cleanup-pods.js";
+import {
+  nodeManagement,
+  nodeManagementSchema,
+} from "./tools/node-management.js";
+import {
   explainResource,
   explainResourceSchema,
   listApiResources,
@@ -84,6 +100,8 @@ const destructiveTools = [
   uninstallHelmChartSchema,
   cleanupSchema, // Cleanup is also destructive as it deletes resources
   kubectlGenericSchema, // Generic kubectl command can perform destructive operations
+  cleanupPodsSchema, // Cleanup pods can delete pods
+  nodeManagementSchema, // Node management can drain nodes (destructive)
 ];
 
 // Get all available tools
@@ -112,6 +130,10 @@ const allTools = [
   installHelmChartSchema,
   upgradeHelmChartSchema,
   uninstallHelmChartSchema,
+  helmTemplateApplySchema,
+  helmTemplateUninstallSchema,
+  cleanupPodsSchema,
+  nodeManagementSchema,
 
   // Port forwarding
   PortForwardSchema,
@@ -414,6 +436,60 @@ server.setRequestHandler(
               repo: string;
               namespace: string;
               values?: Record<string, any>;
+            }
+          );
+        }
+
+        case "helm_template_apply": {
+          return await helmTemplateApply(
+            input as {
+              name: string;
+              chart: string;
+              repo?: string;
+              namespace: string;
+              values?: Record<string, any>;
+              valuesFile?: string;
+              createNamespace?: boolean;
+            }
+          );
+        }
+
+        case "helm_template_uninstall": {
+          return await helmTemplateUninstall(
+            input as {
+              name: string;
+              chart: string;
+              namespace: string;
+              values?: Record<string, any>;
+              valuesFile?: string;
+            }
+          );
+        }
+
+        case "cleanup_pods": {
+          return await cleanupPods(
+            input as {
+              namespace: string;
+              dryRun?: boolean;
+              forceDelete?: boolean;
+              allNamespaces?: boolean;
+              confirmDelete?: boolean;
+            }
+          );
+        }
+
+        case "node_management": {
+          return await nodeManagement(
+            input as {
+              operation: "cordon" | "drain" | "uncordon" | "list";
+              nodeName?: string;
+              force?: boolean;
+              gracePeriod?: number;
+              deleteLocalData?: boolean;
+              ignoreDaemonsets?: boolean;
+              timeout?: string;
+              dryRun?: boolean;
+              confirmDrain?: boolean;
             }
           );
         }
