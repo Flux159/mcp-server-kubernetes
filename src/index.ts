@@ -58,6 +58,7 @@ import {
   kubectlRollout,
   kubectlRolloutSchema,
 } from "./tools/kubectl-rollout.js";
+import { kubectlCp, kubectlCopySchema } from "./tools/kubectl-cp.js";
 import { registerPromptHandlers } from "./prompts/index.js";
 import { ping, pingSchema } from "./tools/ping.js";
 
@@ -101,6 +102,7 @@ const allTools = [
   kubectlScaleSchema,
   kubectlPatchSchema,
   kubectlRolloutSchema,
+  kubectlCopySchema,
 
   // Kubernetes context management
   kubectlContextSchema,
@@ -352,6 +354,17 @@ server.setRequestHandler(
           sortBy: (input as { sortBy?: string }).sortBy,
           output: (input as { output?: string }).output,
         });
+      }
+
+      if (name === "kubectl_cp") {
+        return await kubectlCp(
+          k8sManager,
+          input as {
+            sourceFilePath: string;
+            destinationFilePath: string;
+            container?: string;
+          }
+        );
       }
 
       // Handle specific non-kubectl operations
