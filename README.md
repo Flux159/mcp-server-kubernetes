@@ -93,6 +93,7 @@ npx mcp-chat --config "%APPDATA%\Claude\claude_desktop_config.json"
 - [x] Troubleshooting Prompt (`k8s-diagnose`)
   - Guides through a systematic Kubernetes troubleshooting flow for pods based on a keyword and optional namespace.
 - [x] Non-destructive mode for read and create/update-only access to clusters
+- [x] Secrets masking for security (masks sensitive data in `kubectl get secrets` commands, does not affect logs)
 
 ## Prompts
 
