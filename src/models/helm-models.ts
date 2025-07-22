@@ -18,8 +18,11 @@ export interface HelmOperation {
 
 export interface HelmInstallOperation extends HelmOperation {
   chart: string;
-  repo: string;
+  repo?: string;
   values?: Record<string, any>;
+  valuesFile?: string;
+  createNamespace?: boolean;
+  useTemplate?: boolean;
 }
 
 export interface HelmUpgradeOperation extends HelmInstallOperation {}
