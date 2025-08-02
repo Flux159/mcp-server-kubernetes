@@ -26,6 +26,11 @@ jobs:
           minikube start --driver=docker
           minikube status
 
+      - name: Install Helm
+        run: |
+          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+          helm version
+
       - name: Start kubectl proxy
         run: |
           # Start the proxy in background and save the PID
