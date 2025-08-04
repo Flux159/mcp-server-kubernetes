@@ -2,6 +2,7 @@ import { KubernetesManager } from "../types.js";
 import { execFileSync } from "child_process";
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import { getSpawnMaxBuffer } from "../config/max-buffer.js";
+import { contextParameter, namespaceParameter } from "../models/common-parameters.js";
 
 export const kubectlRolloutSchema = {
   name: "kubectl_rollout",
@@ -26,11 +27,7 @@ export const kubectlRolloutSchema = {
         type: "string",
         description: "Name of the resource",
       },
-      namespace: {
-        type: "string",
-        description: "Namespace of the resource",
-        default: "default",
-      },
+      namespace: namespaceParameter,
       revision: {
         type: "number",
         description: "Revision to rollback to (for undo subcommand)",
@@ -49,6 +46,7 @@ export const kubectlRolloutSchema = {
         description: "Watch the rollout status in real-time until completion",
         default: false,
       },
+      context: contextParameter,
     },
     required: ["subCommand", "resourceType", "name", "namespace"],
   },
@@ -65,11 +63,13 @@ export async function kubectlRollout(
     toRevision?: number;
     timeout?: string;
     watch?: boolean;
+    context?: string;
   }
 ) {
   try {
     const namespace = input.namespace || "default";
     const watch = input.watch || false;
+    const context = input.context || "";
 
     const command = "kubectl";
     const args = [
@@ -93,6 +93,11 @@ export async function kubectlRollout(
     // Add timeout if specified
     if (input.timeout) {
       args.push(`--timeout=${input.timeout}`);
+    }
+
+    // Add context if provided
+    if (context) {
+      args.push("--context", context);
     }
 
     // Execute the command

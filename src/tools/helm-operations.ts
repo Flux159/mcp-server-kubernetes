@@ -8,6 +8,7 @@ import {
   HelmUpgradeOperation,
 } from "../models/helm-models.js";
 import { getSpawnMaxBuffer } from "../config/max-buffer.js";
+import { contextParameter, namespaceParameter } from "../models/common-parameters.js";
 
 export const installHelmChartSchema = {
   name: "install_helm_chart",
@@ -27,10 +28,8 @@ export const installHelmChartSchema = {
         type: "string",
         description: "Chart repository URL",
       },
-      namespace: {
-        type: "string",
-        description: "Kubernetes namespace",
-      },
+      namespace: namespaceParameter,
+      context: contextParameter,
       values: {
         type: "object",
         description: "Chart values",
@@ -60,10 +59,8 @@ export const upgradeHelmChartSchema = {
         type: "string",
         description: "Chart repository URL",
       },
-      namespace: {
-        type: "string",
-        description: "Kubernetes namespace",
-      },
+      namespace: namespaceParameter,
+      context: contextParameter,
       values: {
         type: "object",
         description: "Chart values",
@@ -85,10 +82,8 @@ export const uninstallHelmChartSchema = {
         type: "string",
         description: "Release name",
       },
-      namespace: {
-        type: "string",
-        description: "Kubernetes namespace",
-      },
+      namespace: namespaceParameter,
+      context: contextParameter,
     },
     required: ["name", "namespace"],
   },

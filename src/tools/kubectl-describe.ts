@@ -2,6 +2,7 @@ import { KubernetesManager } from "../types.js";
 import { execFileSync } from "child_process";
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import { getSpawnMaxBuffer } from "../config/max-buffer.js";
+import { namespaceParameter, contextParameter } from "../models/common-parameters.js";
 
 export const kubectlDescribeSchema = {
   name: "kubectl_describe",
@@ -19,12 +20,8 @@ export const kubectlDescribeSchema = {
         type: "string",
         description: "Name of the resource to describe",
       },
-      namespace: {
-        type: "string",
-        description:
-          "Namespace of the resource (optional - defaults to 'default' for namespaced resources)",
-        default: "default",
-      },
+      namespace: namespaceParameter,
+      context: contextParameter,
       allNamespaces: {
         type: "boolean",
         description: "If true, describe resources across all namespaces",
@@ -42,6 +39,7 @@ export async function kubectlDescribe(
     name: string;
     namespace?: string;
     allNamespaces?: boolean;
+    context?: string;
   }
 ) {
   try {
@@ -49,6 +47,7 @@ export async function kubectlDescribe(
     const name = input.name;
     const namespace = input.namespace || "default";
     const allNamespaces = input.allNamespaces || false;
+    const context = input.context || "";
 
     // Build the kubectl command
     const command = "kubectl";
@@ -59,6 +58,10 @@ export async function kubectlDescribe(
       args.push("--all-namespaces");
     } else if (namespace && !isNonNamespacedResource(resourceType)) {
       args.push("-n", namespace);
+    }
+
+    if (context) {
+      args.push("--context", context);
     }
 
     // Execute the command

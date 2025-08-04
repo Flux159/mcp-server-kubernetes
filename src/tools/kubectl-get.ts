@@ -3,6 +3,7 @@ import { execFileSync } from "child_process";
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import { getSpawnMaxBuffer } from "../config/max-buffer.js";
 import * as yaml from "js-yaml";
+import { contextParameter, namespaceParameter } from "../models/common-parameters.js";
 
 export const kubectlGetSchema = {
   name: "kubectl_get",
@@ -21,12 +22,7 @@ export const kubectlGetSchema = {
         description:
           "Name of the resource (optional - if not provided, lists all resources of the specified type)",
       },
-      namespace: {
-        type: "string",
-        description:
-          "Namespace of the resource (optional - defaults to 'default' for namespaced resources)",
-        default: "default",
-      },
+      namespace: namespaceParameter,
       output: {
         type: "string",
         enum: ["json", "yaml", "wide", "name", "custom"],
@@ -52,6 +48,7 @@ export const kubectlGetSchema = {
         description:
           "Sort events by a field (default: lastTimestamp). Only applicable for events.",
       },
+      context: contextParameter
     },
     required: ["resourceType", "name", "namespace"],
   },
@@ -68,6 +65,7 @@ export async function kubectlGet(
     labelSelector?: string;
     fieldSelector?: string;
     sortBy?: string;
+    context?: string;
   }
 ) {
   try {
@@ -79,6 +77,7 @@ export async function kubectlGet(
     const labelSelector = input.labelSelector || "";
     const fieldSelector = input.fieldSelector || "";
     const sortBy = input.sortBy;
+    const context = input.context || "";
 
     // Build the kubectl command
     const command = "kubectl";
@@ -102,6 +101,10 @@ export async function kubectlGet(
       args.push("--all-namespaces");
     } else if (namespace && !isNonNamespacedResource(resourceType)) {
       args.push("-n", namespace);
+    }
+
+    if (context) {
+      args.push("--context", context);
     }
 
     // Add label selector if provided

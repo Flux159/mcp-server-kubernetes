@@ -14,6 +14,7 @@ export interface ExplainResourceParams {
   apiVersion?: string;
   recursive?: boolean;
   output?: "plaintext" | "plaintext-openapiv2";
+  context?: string;
 }
 
 export interface ListApiResourcesParams {
@@ -21,4 +22,5 @@ export interface ListApiResourcesParams {
   namespaced?: boolean;
   verbs?: string[];
   output?: "wide" | "name" | "no-headers";
+  context?: string;
 }

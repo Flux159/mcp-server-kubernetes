@@ -2,6 +2,7 @@ import { KubernetesManager } from "../types.js";
 import { execFileSync } from "child_process";
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import { getSpawnMaxBuffer } from "../config/max-buffer.js";
+import { contextParameter, namespaceParameter } from "../models/common-parameters.js";
 
 export const kubectlLogsSchema = {
   name: "kubectl_logs",
@@ -19,11 +20,7 @@ export const kubectlLogsSchema = {
         type: "string",
         description: "Name of the resource",
       },
-      namespace: {
-        type: "string",
-        description: "Namespace of the resource",
-        default: "default",
-      },
+      namespace: namespaceParameter,
       container: {
         type: "string",
         description:
@@ -60,6 +57,7 @@ export const kubectlLogsSchema = {
         type: "string",
         description: "Filter resources by label selector",
       },
+      context: contextParameter,
     },
     required: ["resourceType", "name", "namespace"],
   },
@@ -79,12 +77,14 @@ export async function kubectlLogs(
     previous?: boolean;
     follow?: boolean;
     labelSelector?: string;
+    context?: string;
   }
 ) {
   try {
     const resourceType = input.resourceType.toLowerCase();
     const name = input.name;
     const namespace = input.namespace || "default";
+    const context = input.context || "";
 
     const command = "kubectl";
     // Handle different resource types
@@ -99,6 +99,11 @@ export async function kubectlLogs(
 
       // Add options
       args = addLogOptions(args, input);
+
+      // Add context if provided
+      if (context) {
+        args.push("--context", context);
+      }
 
       // Execute the command
       try {
@@ -287,6 +292,10 @@ function addLogOptions(args: string[], input: any): string[] {
 
   if (input.follow) {
     args.push(`--follow`);
+  }
+
+  if (input.context) {
+    args.push("--context", input.context);
   }
 
   return args;

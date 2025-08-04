@@ -9,6 +9,7 @@ import * as k8s from "@kubernetes/client-node";
 import { KubernetesManager } from "../types.js";
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import { Writable } from "stream";
+import { contextParameter, namespaceParameter } from "../models/common-parameters.js";
 
 /**
  * Schema for exec_in_pod tool.
@@ -27,11 +28,7 @@ export const execInPodSchema = {
         type: "string",
         description: "Name of the pod to execute the command in",
       },
-      namespace: {
-        type: "string",
-        description: "Kubernetes namespace where the pod is located",
-        default: "default",
-      },
+      namespace: namespaceParameter,
       command: {
         anyOf: [
           { type: "string" },
@@ -51,6 +48,7 @@ export const execInPodSchema = {
         type: "number",
         description: "Timeout for command - 60000 milliseconds if not specified",
       },
+      context: contextParameter,
     },
     required: ["name", "command"],
   },
@@ -70,6 +68,7 @@ export async function execInPod(
     container?: string;
     shell?: string;
     timeout?: number;
+    context?: string;
   }
 ): Promise<{ content: { type: string; text: string }[] }> {
   const namespace = input.namespace || "default";
@@ -109,6 +108,11 @@ export async function execInPod(
   });
 
   try {
+    // Set context if provided
+    if (input.context) {
+      k8sManager.setCurrentContext(input.context);
+    }
+
     // Use the Kubernetes client-node Exec API for native exec
     const kc = k8sManager.getKubeConfig();
     const exec = new k8s.Exec(kc);
