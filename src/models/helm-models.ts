@@ -18,13 +18,18 @@ export interface HelmOperation {
 
 export interface HelmInstallOperation extends HelmOperation {
   chart: string;
-  repo: string;
+  repo?: string;
   values?: Record<string, any>;
+  valuesFile?: string;
+  createNamespace?: boolean;
+  useTemplate?: boolean;
 }
 
 export interface HelmUpgradeOperation extends HelmInstallOperation {}
 
 export type HelmResponse = {
-  status: "installed" | "upgraded" | "uninstalled";
+  status: "installed" | "upgraded" | "uninstalled" | "failed";
   message?: string;
+  error?: string;
+  steps?: string[];
 };

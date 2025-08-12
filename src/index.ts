@@ -9,6 +9,13 @@ import {
   uninstallHelmChart,
   uninstallHelmChartSchema,
 } from "./tools/helm-operations.js";
+
+
+
+import {
+  nodeManagement,
+  nodeManagementSchema,
+} from "./tools/node-management.js";
 import {
   explainResource,
   explainResourceSchema,
@@ -85,6 +92,8 @@ const destructiveTools = [
   uninstallHelmChartSchema,
   cleanupSchema, // Cleanup is also destructive as it deletes resources
   kubectlGenericSchema, // Generic kubectl command can perform destructive operations
+
+  nodeManagementSchema, // Node management can drain nodes (destructive)
 ];
 
 // Get all available tools
@@ -113,6 +122,8 @@ const allTools = [
   installHelmChartSchema,
   upgradeHelmChartSchema,
   uninstallHelmChartSchema,
+
+  nodeManagementSchema,
 
   // Port forwarding
   PortForwardSchema,
@@ -430,6 +441,26 @@ server.setRequestHandler(
               namespace: string;
               values?: Record<string, any>;
               context?: string;
+            }
+          );
+        }
+
+
+
+
+
+        case "node_management": {
+          return await nodeManagement(
+            input as {
+              operation: "cordon" | "drain" | "uncordon";
+              nodeName?: string;
+              force?: boolean;
+              gracePeriod?: number;
+              deleteLocalData?: boolean;
+              ignoreDaemonsets?: boolean;
+              timeout?: string;
+              dryRun?: boolean;
+              confirmDrain?: boolean;
             }
           );
         }
