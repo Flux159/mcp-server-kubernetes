@@ -25,23 +25,32 @@ jobs:
         run: |
           curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
           sudo install minikube-linux-amd64 /usr/local/bin/minikube
-          minikube start --driver=docker
+          # Start minikube with additional flags to support kubectl cp
+          minikube start --driver=docker --extra-config=apiserver.enable-admission-plugins=NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,DefaultTolerationSeconds,NodeRestriction,MutatingAdmissionWebhook,ValidatingAdmissionWebhook,ResourceQuota
           minikube status
+
+          # Enable necessary addons
+          minikube addons enable default-storageclass
+          minikube addons enable storage-provisioner
+
+      - name: Configure kubectl for Minikube
+        run: |
+          # Get the minikube IP and configure kubectl
+          MINIKUBE_IP=$(minikube ip)
+          echo "Minikube IP: $MINIKUBE_IP"
+
+          # Update kubeconfig to use the correct server URL
+          kubectl config set-cluster minikube --server=https://$MINIKUBE_IP:8443 --insecure-skip-tls-verify=true
+
+          # Verify connection
+          kubectl cluster-info
+          kubectl get nodes
 
       - name: Start kubectl proxy
         run: |
           # Start the proxy in background and save the PID
           kubectl proxy --port=8080 &  
           echo "KUBECTL_PROXY_PID=$!" >> $GITHUB_ENV
-
-          # Give the proxy a moment to start
-          sleep 3
-
-          # Update the kubeconfig file to use the proxy URL
-          sed -i 's|https://192.168.49.2:8443|http://localhost:8080|g' ~/.kube/config
-
-          # Verify the change took effect
-          grep "server:" ~/.kube/config
 
       - name: Run Tests in Minikube
         run: bun run test
