@@ -29,6 +29,28 @@ export function startSSEServer(server: Server) {
     }
   });
 
+  app.get("/health", async (req: express.Request, res: express.Response) => {
+    res.json({ status: "ok" });
+  });
+
+  app.get("/ready", async (req: express.Request, res: express.Response) => {
+    try {
+      // We can add more checks if required
+      // For now, we'll consider the server ready if it can respond to this request
+      res.json({
+        status: "ready",
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error("Readiness check failed:", error);
+      res.status(503).json({
+        status: "not ready",
+        reason: "Server initialization incomplete",
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
   let port = 3000;
   try {
     port = parseInt(process.env.PORT || "3000", 10);

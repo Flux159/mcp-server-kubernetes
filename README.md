@@ -9,7 +9,8 @@
 [![Issues](https://img.shields.io/github/issues/Flux159/mcp-server-kubernetes)](https://github.com/Flux159/mcp-server-kubernetes/issues)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/Flux159/mcp-server-kubernetes/pulls)
 [![Last Commit](https://img.shields.io/github/last-commit/Flux159/mcp-server-kubernetes)](https://github.com/Flux159/mcp-server-kubernetes/commits/main)
-[![smithery badge](https://smithery.ai/badge/mcp-server-kubernetes)](https://smithery.ai/protocol/mcp-server-kubernetes)
+[![Trust Score](https://archestra.ai/mcp-catalog/api/badge/quality/Flux159/mcp-server-kubernetes)](https://archestra.ai/mcp-catalog/flux159__mcp-server-kubernetes)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Flux159/mcp-server-kubernetes)
 
 MCP Server that can connect to a Kubernetes cluster and manage it. Supports loading kubeconfig from multiple sources in priority order.
 
@@ -17,7 +18,34 @@ https://github.com/user-attachments/assets/f25f8f4e-4d04-479b-9ae0-5dac452dd2ed
 
 <a href="https://glama.ai/mcp/servers/w71ieamqrt"><img width="380" height="200" src="https://glama.ai/mcp/servers/w71ieamqrt/badge" /></a>
 
-## Usage with Claude Desktop
+## Installation & Usage
+
+### Prerequisites
+
+Before using this MCP server with any tool, make sure you have:
+
+1. kubectl installed and in your PATH
+2. A valid kubeconfig file with contexts configured
+3. Access to a Kubernetes cluster configured for kubectl (e.g. minikube, Rancher Desktop, GKE, etc.)
+4. Helm v3 installed and in your PATH (no Tiller required). Optional if you don't plan to use Helm.
+
+You can verify your connection by running `kubectl get pods` in a terminal to ensure you can connect to your cluster without credential issues.
+
+By default, the server loads kubeconfig from `~/.kube/config`. For additional authentication options (environment variables, custom paths, etc.), see [ADVANCED_README.md](ADVANCED_README.md).
+
+### Claude Code
+
+Add the MCP server to Claude Code using the built-in command:
+
+```bash
+claude mcp add kubernetes -- npx mcp-server-kubernetes
+```
+
+This will automatically configure the server in your Claude Code MCP settings.
+
+### Claude Desktop
+
+Add the following configuration to your Claude Desktop config file:
 
 ```json
 {
@@ -30,18 +58,43 @@ https://github.com/user-attachments/assets/f25f8f4e-4d04-479b-9ae0-5dac452dd2ed
 }
 ```
 
-By default, the server loads kubeconfig from `~/.kube/config`. For additional authentication options (environment variables, custom paths, etc.), see [ADVANCED_README.md](ADVANCED_README.md).
+### VS Code
 
-The server will automatically connect to your current kubectl context. Make sure you have:
+[![Install Kubernetes MCP in VS Code](https://img.shields.io/badge/Install%20Kubernetes%20MCP%20in%20VS%20Code-blue?logo=visualstudiocode)](vscode:mcp/install?%7B%22name%22%3A%20%22kubernetes%22%2C%20%22type%22%3A%20%22stdio%22%2C%20%22command%22%3A%20%22npx%22%2C%20%22args%22%3A%20%5B%22mcp-server-kubernetes%22%5D%7D)
 
-1. kubectl installed and in your PATH
-2. A valid kubeconfig file with contexts configured
-3. Access to a Kubernetes cluster configured for kubectl (e.g. minikube, Rancher Desktop, GKE, etc.)
-4. Helm v3 installed and in your PATH (no Tiller required). Optional if you don't plan to use Helm.
+For VS Code integration, you can use the MCP server with extensions that support the Model Context Protocol:
 
-You can verify your connection by asking Claude to list your pods or create a test deployment.
+1. Install a compatible MCP extension (such as Claude Dev or similar MCP clients)
+2. Configure the extension to use this server:
 
-If you have errors open up a standard terminal and run `kubectl get pods` to see if you can connect to your cluster without credentials issues.
+```json
+{
+  "mcpServers": {
+    "kubernetes": {
+      "command": "npx",
+      "args": ["mcp-server-kubernetes"],
+      "description": "Kubernetes cluster management and operations"
+    }
+  }
+}
+```
+
+### Cursor
+
+Cursor supports MCP servers through its AI integration. Add the server to your Cursor MCP configuration:
+
+```json
+{
+  "mcpServers": {
+    "kubernetes": {
+      "command": "npx",
+      "args": ["mcp-server-kubernetes"]
+    }
+  }
+}
+```
+
+The server will automatically connect to your current kubectl context. You can verify the connection by asking the AI assistant to list your pods or create a test deployment.
 
 ## Usage with mcp-chat
 
@@ -90,6 +143,12 @@ npx mcp-chat --config "%APPDATA%\Claude\claude_desktop_config.json"
   - Run Helm operations
     - Install, upgrade, and uninstall charts
     - Support for custom values, repositories, and versions
+    - Template-based installation (`helm_template_apply`) to bypass authentication issues
+    - Template-based uninstallation (`helm_template_uninstall`) to bypass authentication issues
+  - Pod cleanup operations
+    - Clean up problematic pods (`cleanup_pods`) in states: Evicted, ContainerStatusUnknown, Completed, Error, ImagePullBackOff, CrashLoopBackOff
+  - Node management operations
+    - Cordoning, draining, and uncordoning nodes (`node_management`) for maintenance and scaling operations
 - [x] Troubleshooting Prompt (`k8s-diagnose`)
   - Guides through a systematic Kubernetes troubleshooting flow for pods based on a keyword and optional namespace.
 - [x] Non-destructive mode for read and create/update-only access to clusters
@@ -99,7 +158,7 @@ npx mcp-chat --config "%APPDATA%\Claude\claude_desktop_config.json"
 
 The MCP Kubernetes server includes specialized prompts to assist with common diagnostic operations.
 
-### k8s-diagnose Prompt
+### /k8s-diagnose Prompt
 
 This prompt provides a systematic troubleshooting flow for Kubernetes pods. It accepts a `keyword` to identify relevant pods and an optional `namespace` to narrow the search.
 The prompt's output will guide you through an autonomous troubleshooting flow, providing instructions for identifying issues, collecting evidence, and suggesting remediation steps.
@@ -196,7 +255,7 @@ All read-only and resource creation/update operations remain available:
 
 - Resource Information: `kubectl_get`, `kubectl_describe`, `kubectl_logs`, `explain_resource`, `list_api_resources`
 - Resource Creation/Modification: `kubectl_apply`, `kubectl_create`, `kubectl_scale`, `kubectl_patch`, `kubectl_rollout`
-- Helm Operations: `install_helm_chart`, `upgrade_helm_chart`
+- Helm Operations: `install_helm_chart`, `upgrade_helm_chart`, `helm_template_apply`, `helm_template_uninstall`
 - Connectivity: `port_forward`, `stop_port_forward`
 - Context Management: `kubectl_context`
 
@@ -207,9 +266,11 @@ The following destructive operations are disabled:
 - `kubectl_delete`: Deleting any Kubernetes resources
 - `uninstall_helm_chart`: Uninstalling Helm charts
 - `cleanup`: Cleanup of managed resources
+- `cleanup_pods`: Cleaning up problematic pods
+- `node_management`: Node management operations (can drain nodes)
 - `kubectl_generic`: General kubectl command access (may include destructive operations)
 
-For additional advanced features, see the [ADVANCED_README.md](ADVANCED_README.md).
+For additional advanced features, see the [ADVANCED_README.md](ADVANCED_README.md) and also the [docs](https://github.com/Flux159/mcp-server-kubernetes/tree/main/docs) folder for specific information on `helm_install`, `helm_template_apply`, node management & pod cleanup.
 
 ## Architecture
 

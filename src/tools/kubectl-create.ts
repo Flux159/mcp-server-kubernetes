@@ -5,6 +5,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
 import { getSpawnMaxBuffer } from "../config/max-buffer.js";
+import { contextParameter, namespaceParameter, dryRunParameter } from "../models/common-parameters.js";
 
 export const kubectlCreateSchema = {
   name: "kubectl_create",
@@ -14,12 +15,7 @@ export const kubectlCreateSchema = {
     type: "object",
     properties: {
       // General options
-      dryRun: {
-        type: "boolean",
-        description:
-          "If true, only validate the resource, don't actually create it",
-        default: false,
-      },
+      dryRun: dryRunParameter,
       output: {
         type: "string",
         enum: [
@@ -66,11 +62,7 @@ export const kubectlCreateSchema = {
         type: "string",
         description: "Name of the resource to create",
       },
-      namespace: {
-        type: "string",
-        description: "Namespace to create the resource in",
-        default: "default",
-      },
+      namespace: namespaceParameter,
 
       // ConfigMap specific parameters
       fromLiteral: {
@@ -157,6 +149,7 @@ export const kubectlCreateSchema = {
         description:
           'Annotations to apply to the resource (e.g. ["key1=value1", "key2=value2"])',
       },
+      context: contextParameter,
     },
     required: [],
   },
@@ -203,6 +196,7 @@ export async function kubectlCreate(
     annotations?: string[];
     schedule?: string;
     suspend?: boolean;
+    context?: string;
   }
 ) {
   try {
@@ -231,6 +225,7 @@ export async function kubectlCreate(
     const dryRun = input.dryRun || false;
     const validate = input.validate ?? true;
     const output = input.output || "yaml";
+    const context = input.context || "";
 
     const command = "kubectl";
     const args = ["create"];
@@ -422,6 +417,11 @@ export async function kubectlCreate(
 
     // Add output format
     args.push("-o", output);
+
+    // Add context if provided
+    if (context) {
+      args.push("--context", context);
+    }
 
     // Execute the command
     try {

@@ -37,6 +37,28 @@ function startSSEServerWithReturn(server: Server): Promise<any> {
       }
     });
 
+    app.get("/health", async (req, res) => {
+      res.json({ status: "ok" });
+    });
+
+    app.get("/ready", async (req, res) => {
+      // For Kubernetes readiness probe
+      try {
+        res.json({
+          status: "ready",
+          timestamp: new Date().toISOString(),
+          service: "mcp-kubernetes-server"
+        });
+      } catch (error) {
+        console.error("Readiness check failed:", error);
+        res.status(503).json({
+          status: "not ready",
+          reason: "Server initialization incomplete",
+          timestamp: new Date().toISOString()
+        });
+      }
+    });
+
     const port = parseInt(process.env.PORT || "3000");
     const serverInstance = app.listen(port, () => {
       console.log(
@@ -121,6 +143,27 @@ describe("SSE transport", () => {
       await server.close();
     } catch (error) {
       console.warn("Error during cleanup:", error);
+    }
+  });
+
+  test("should respond to readiness check", async () => {
+    try {
+      // Send a GET request to the /ready endpoint
+      const readyUrl = `${serverUrl}/ready`;
+      const response = await fetch(readyUrl, {
+        method: "GET",
+        headers: {
+          accept: "application/json",
+        },
+      });
+
+      expect(response.status).toBe(200);
+
+      const responseJson = await response.json();
+      expect(responseJson.status).toBe("ready");
+    } catch (error) {
+      console.error("Error during readiness check:", error);
+      throw error;
     }
   });
 

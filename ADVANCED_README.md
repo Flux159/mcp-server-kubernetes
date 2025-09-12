@@ -22,8 +22,8 @@ If you have large clusters or see a `spawnSync ENOBFUS` error, you may need to s
 
 The server supports multiple authentication methods with the following priority order:
 
-1. **In-cluster** (if running in a pod)
-2. **`KUBECONFIG_YAML`** – Full config as YAML string
+1. **`KUBECONFIG_YAML`** – Full config as YAML string
+2. **In-cluster** (if running in a pod)
 3. **`KUBECONFIG_JSON`** – Full config as JSON string
 4. **`K8S_SERVER` + `K8S_TOKEN`** – Minimal env-based config
 5. **`KUBECONFIG_PATH`** – Custom kubeconfig file path

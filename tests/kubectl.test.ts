@@ -402,5 +402,31 @@ describe("kubectl operations", () => {
       expect(events.events).toBeDefined();
       expect(Array.isArray(events.events)).toBe(true);
     });
+
+    test("get events with custom invalid context should fail", async () => {
+      try {
+        await retry(async () => {
+          return await client.request(
+            {
+              method: "tools/call",
+              params: {
+                name: "kubectl_get",
+                arguments: {
+                  resourceType: "events",
+                  namespace: "default",
+                  output: "json",
+                  context: "non-existent-cluster"
+                },
+              },
+            },
+            asResponseSchema(KubectlResponseSchema)
+          );
+        });
+        
+        expect(true).toBe(false); // This should not execute
+      } catch (error: any) {
+        expect(error.message).toContain('error: context "non-existent-cluster" does not exist');
+      }
+    });
   });
 });

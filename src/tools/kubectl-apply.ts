@@ -5,6 +5,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
 import { getSpawnMaxBuffer } from "../config/max-buffer.js";
+import { contextParameter, namespaceParameter, dryRunParameter } from "../models/common-parameters.js";
 
 export const kubectlApplySchema = {
   name: "kubectl_apply",
@@ -21,22 +22,15 @@ export const kubectlApplySchema = {
         description:
           "Path to a YAML file to apply (optional - use either manifest or filename)",
       },
-      namespace: {
-        type: "string",
-        description: "Namespace to apply the resource to (optional)",
-        default: "default",
-      },
-      dryRun: {
-        type: "boolean",
-        description: "If true, only validate the resource, don't apply it",
-        default: false,
-      },
+      namespace: namespaceParameter,
+      dryRun: dryRunParameter,
       force: {
         type: "boolean",
         description:
           "If true, immediately remove resources from API and bypass graceful deletion",
         default: false,
       },
+      context: contextParameter,
     },
     required: [],
   },
@@ -50,6 +44,7 @@ export async function kubectlApply(
     namespace?: string;
     dryRun?: boolean;
     force?: boolean;
+    context?: string;
   }
 ) {
   try {
@@ -63,6 +58,7 @@ export async function kubectlApply(
     const namespace = input.namespace || "default";
     const dryRun = input.dryRun || false;
     const force = input.force || false;
+    const context = input.context || "";
 
     let command = "kubectl";
     let args = ["apply"];
@@ -90,6 +86,11 @@ export async function kubectlApply(
     // Add force flag if requested
     if (force) {
       args.push("--force");
+    }
+
+    // Add context if provided
+    if (context) {
+      args.push("--context", context);
     }
 
     // Execute the command

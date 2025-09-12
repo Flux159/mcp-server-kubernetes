@@ -2,6 +2,7 @@ import { KubernetesManager } from "../types.js";
 import { execFileSync } from "child_process";
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import { getSpawnMaxBuffer } from "../config/max-buffer.js";
+import { contextParameter, namespaceParameter } from "../models/common-parameters.js";
 
 export const kubectlGenericSchema = {
   name: "kubectl_generic",
@@ -27,11 +28,7 @@ export const kubectlGenericSchema = {
         type: "string",
         description: "Resource name",
       },
-      namespace: {
-        type: "string",
-        description: "Namespace",
-        default: "default",
-      },
+      namespace: namespaceParameter,
       outputFormat: {
         type: "string",
         description: "Output format (e.g. json, yaml, wide)",
@@ -47,6 +44,7 @@ export const kubectlGenericSchema = {
         items: { type: "string" },
         description: "Additional command arguments",
       },
+      context: contextParameter,
     },
     required: ["command"],
   },
@@ -63,6 +61,7 @@ export async function kubectlGeneric(
     outputFormat?: string;
     flags?: Record<string, any>;
     args?: string[];
+    context?: string;
   }
 ) {
   try {
@@ -111,6 +110,11 @@ export async function kubectlGeneric(
     // Add any additional arguments
     if (input.args && input.args.length > 0) {
       cmdArgs.push(...input.args);
+    }
+
+    // Add context if provided
+    if (input.context) {
+      cmdArgs.push("--context", input.context);
     }
 
     // Execute the command

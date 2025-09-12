@@ -79,23 +79,43 @@ export async function kubectlContext(
 
           // Parse the tabular output from kubectl
           const lines = rawResult.trim().split("\n");
-          const headers = lines[0].trim().split(/\s+/);
-          const currentIndex = headers.indexOf("CURRENT");
-          const nameIndex = headers.indexOf("NAME");
-          const clusterIndex = headers.indexOf("CLUSTER");
-          const authInfoIndex = headers.indexOf("AUTHINFO");
-          const namespaceIndex = headers.indexOf("NAMESPACE");
+          const headerLine = lines[0];
+
+          // Find column positions based on header positions
+          const currentPos = headerLine.indexOf("CURRENT");
+          const namePos = headerLine.indexOf("NAME");
+          const clusterPos = headerLine.indexOf("CLUSTER");
+          const authInfoPos = headerLine.indexOf("AUTHINFO");
+          const namespacePos = headerLine.indexOf("NAMESPACE");
+
+          if (currentPos === -1 || namePos === -1 || clusterPos === -1 || authInfoPos === -1 || namespacePos === -1) {
+            throw new McpError(
+              ErrorCode.InvalidParams,
+              "Invalid kubectl output format"
+            );
+          }
 
           const contexts = [];
           for (let i = 1; i < lines.length; i++) {
-            const columns = lines[i].trim().split(/\s+/);
-            const isCurrent = columns[currentIndex]?.trim() === "*";
+            const line = lines[i];
+            if (line.trim() === "") continue; // Skip empty lines
+
+            // Extract fields based on column positions
+            const isCurrent = line.substring(currentPos, namePos).trim() === "*";
+            const name = line.substring(namePos, clusterPos).trim();
+            const cluster = line.substring(clusterPos, authInfoPos).trim();
+            const authInfo = namespacePos > 0
+              ? line.substring(authInfoPos, namespacePos).trim()
+              : line.substring(authInfoPos).trim();
+            const namespace = namespacePos > 0
+              ? line.substring(namespacePos).trim() || "default"
+              : "default";
 
             contexts.push({
-              name: columns[nameIndex]?.trim(),
-              cluster: columns[clusterIndex]?.trim(),
-              user: columns[authInfoIndex]?.trim(),
-              namespace: columns[namespaceIndex]?.trim() || "default",
+              name: name,
+              cluster: cluster,
+              user: authInfo,
+              namespace: namespace,
               isCurrent: isCurrent,
             });
           }

@@ -5,6 +5,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
 import { getSpawnMaxBuffer } from "../config/max-buffer.js";
+import { contextParameter, namespaceParameter } from "../models/common-parameters.js";
 
 export const kubectlDeleteSchema = {
   name: "kubectl_delete",
@@ -22,12 +23,7 @@ export const kubectlDeleteSchema = {
         type: "string",
         description: "Name of the resource to delete",
       },
-      namespace: {
-        type: "string",
-        description:
-          "Namespace of the resource (optional - defaults to 'default' for namespaced resources)",
-        default: "default",
-      },
+      namespace: namespaceParameter,
       labelSelector: {
         type: "string",
         description:
@@ -57,6 +53,7 @@ export const kubectlDeleteSchema = {
         description:
           "Period of time in seconds given to the resource to terminate gracefully",
       },
+      context: contextParameter,
     },
     required: ["resourceType", "name", "namespace"],
   },
@@ -74,6 +71,7 @@ export async function kubectlDelete(
     allNamespaces?: boolean;
     force?: boolean;
     gracePeriodSeconds?: number;
+    context?: string;
   }
 ) {
   try {
@@ -96,6 +94,7 @@ export async function kubectlDelete(
     const namespace = input.namespace || "default";
     const allNamespaces = input.allNamespaces || false;
     const force = input.force || false;
+    const context = input.context || "";
 
     const command = "kubectl";
     const args = ["delete"];
@@ -142,6 +141,11 @@ export async function kubectlDelete(
     // Add grace period if specified
     if (input.gracePeriodSeconds !== undefined) {
       args.push(`--grace-period=${input.gracePeriodSeconds}`);
+    }
+
+    // Add context if provided
+    if (context) {
+      args.push("--context", context);
     }
 
     // Execute the command

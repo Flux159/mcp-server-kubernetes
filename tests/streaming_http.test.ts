@@ -50,6 +50,27 @@ describe("Streamable HTTP Server", () => {
     });
   });
 
+  test("should respond to readiness check", async () => {
+    try {
+      // Send a GET request to the /ready endpoint
+      const readyUrl = `http://localhost:${port}/ready`;
+      const response = await fetch(readyUrl, {
+        method: "GET",
+        headers: {
+          accept: "application/json",
+        },
+      });
+
+      expect(response.status).toBe(200);
+
+      const responseJson = await response.json();
+      expect(responseJson.status).toBe("ready");
+    } catch (error) {
+      console.error("Error during readiness check:", error);
+      throw error;
+    }
+  });
+
   test("should handle a full MCP session lifecycle", async () => {
     try {
       // Send a POST request and verify the response on the same channel
