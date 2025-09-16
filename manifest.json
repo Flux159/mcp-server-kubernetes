@@ -13,27 +13,37 @@
     "entry_point": "dist/index.js",
     "mcp_config": {
       "command": "node",
-      "args": [
-        "${__dirname}/dist/index.js"
-      ]
+      "args": ["${__dirname}/dist/index.js"]
     }
   },
   "tools": [
     {
       "name": "ping",
-      "description": "Verify that the counterpart is still responsive and the connection is alive."
+      "description": "Verify that the counterpart is still responsive and the connection is alive.",
+      "annotations": {
+        "readOnlyHint": true
+      }
     },
     {
       "name": "cleanup",
-      "description": "Cleanup all managed resources"
+      "description": "Cleanup all managed resources",
+      "annotations": {
+        "destructiveHint": true
+      }
     },
     {
       "name": "kubectl_get",
-      "description": "Get or list Kubernetes resources by resource type, name, and optionally namespace"
+      "description": "Get or list Kubernetes resources by resource type, name, and optionally namespace",
+      "annotations": {
+        "readOnlyHint": true
+      }
     },
     {
       "name": "kubectl_describe",
-      "description": "Describe Kubernetes resources by resource type, name, and optionally namespace"
+      "description": "Describe Kubernetes resources by resource type, name, and optionally namespace",
+      "annotations": {
+        "readOnlyHint": true
+      }
     },
     {
       "name": "kubectl_apply",
@@ -41,7 +51,10 @@
     },
     {
       "name": "kubectl_delete",
-      "description": "Delete Kubernetes resources by resource type, name, labels, or from a manifest file"
+      "description": "Delete Kubernetes resources by resource type, name, labels, or from a manifest file",
+      "annotations": {
+        "destructiveHint": true
+      }
     },
     {
       "name": "kubectl_create",
@@ -49,7 +62,10 @@
     },
     {
       "name": "kubectl_logs",
-      "description": "Get logs from Kubernetes resources like pods, deployments, or jobs"
+      "description": "Get logs from Kubernetes resources like pods, deployments, or jobs",
+      "annotations": {
+        "readOnlyHint": true
+      }
     },
     {
       "name": "kubectl_patch",
@@ -65,11 +81,17 @@
     },
     {
       "name": "kubectl_context",
-      "description": "Manage Kubernetes contexts - list, get, or set the current context"
+      "description": "Manage Kubernetes contexts - list, get, or set the current context",
+      "annotations": {
+        "readOnlyHint": true
+      }
     },
     {
       "name": "kubectl_generic",
-      "description": "Execute any kubectl command with the provided arguments and flags"
+      "description": "Execute any kubectl command with the provided arguments and flags",
+      "annotations": {
+        "destructiveHint": true
+      }
     },
     {
       "name": "install_helm_chart",
@@ -81,15 +103,31 @@
     },
     {
       "name": "uninstall_helm_chart",
-      "description": "Uninstall a Helm release"
+      "description": "Uninstall a Helm release",
+      "annotations": {
+        "destructiveHint": true
+      }
     },
     {
       "name": "explain_resource",
-      "description": "Get documentation for a Kubernetes resource or field"
+      "description": "Get documentation for a Kubernetes resource or field",
+      "annotations": {
+        "readOnlyHint": true
+      }
     },
     {
       "name": "list_api_resources",
-      "description": "List the API resources available in the cluster"
+      "description": "List the API resources available in the cluster",
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "node_management",
+      "description": "Manage Kubernetes nodes with cordon, drain, and uncordon operations",
+      "annotations": {
+        "destructiveHint": true
+      }
     },
     {
       "name": "exec_in_pod",
@@ -104,12 +142,7 @@
       "description": "Stop a port-forward process"
     }
   ],
-  "keywords": [
-    "kubernetes",
-    "docker",
-    "containers",
-    "containerization"
-  ],
+  "keywords": ["kubernetes", "docker", "containers", "containerization"],
   "license": "MIT",
   "repository": {
     "type": "git",
