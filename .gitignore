@@ -135,5 +135,6 @@ dist
 .pnp.*
 
 mcp-server-kubernetes.dxt
+mcp-server-kubernetes.mcpb
 
 .vscode/

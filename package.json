@@ -17,7 +17,7 @@
   ],
   "scripts": {
     "build": "tsc && shx chmod +x dist/*.js",
-    "builddxt": "node_modules/.bin/dxt pack",
+    "buildmcpb": "node_modules/.bin/mcpb pack",
     "dev": "tsc --watch",
     "start": "node dist/index.js",
     "test": "vitest run",
@@ -51,6 +51,6 @@
     "shx": "0.3.4",
     "typescript": "5.6.2",
     "vitest": "2.1.9",
-    "@anthropic-ai/dxt": "0.1.0"
+    "@anthropic-ai/mcpb": "1.1.0"
   }
 }
