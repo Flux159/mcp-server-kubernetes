@@ -9,8 +9,15 @@ import { execFileSync } from "child_process";
 import { writeFileSync, unlinkSync } from "fs";
 import { dump } from "js-yaml";
 import { getSpawnMaxBuffer } from "../config/max-buffer.js";
-import { contextParameter, namespaceParameter } from "../models/common-parameters.js";
-import { HelmInstallOperation, HelmUpgradeOperation, HelmUninstallOperation } from "../models/helm-models.js";
+import {
+  contextParameter,
+  namespaceParameter,
+} from "../models/common-parameters.js";
+import {
+  HelmInstallOperation,
+  HelmUpgradeOperation,
+  HelmUninstallOperation,
+} from "../models/helm-models.js";
 
 /**
  * Schema for install_helm_chart tool.
@@ -25,7 +32,8 @@ import { HelmInstallOperation, HelmUpgradeOperation, HelmUninstallOperation } fr
  */
 export const installHelmChartSchema = {
   name: "install_helm_chart",
-  description: "Install a Helm chart with support for both standard and template-based installation",
+  description:
+    "Install a Helm chart with support for both standard and template-based installation",
   inputSchema: {
     type: "object",
     properties: {
@@ -53,7 +61,8 @@ export const installHelmChartSchema = {
       },
       useTemplate: {
         type: "boolean",
-        description: "Use helm template + kubectl apply instead of helm install (bypasses auth issues)",
+        description:
+          "Use helm template + kubectl apply instead of helm install (bypasses auth issues)",
         default: false,
       },
       createNamespace: {
@@ -116,6 +125,9 @@ export const upgradeHelmChartSchema = {
 export const uninstallHelmChartSchema = {
   name: "uninstall_helm_chart",
   description: "Uninstall a Helm chart release",
+  annotations: {
+    destructiveHint: true,
+  },
   inputSchema: {
     type: "object",
     properties: {
@@ -165,7 +177,7 @@ async function installHelmChartTemplate(params: {
   valuesFile?: string;
 }): Promise<{ content: { type: string; text: string }[] }> {
   const steps: string[] = [];
-  
+
   try {
     // Step 1: Add helm repository if provided
     if (params.repo) {
@@ -201,7 +213,8 @@ async function installHelmChartTemplate(params: {
       "template",
       params.name,
       params.chart,
-      "--namespace", params.namespace
+      "--namespace",
+      params.namespace,
     ];
 
     if (params.repo) {
@@ -212,17 +225,17 @@ async function installHelmChartTemplate(params: {
       const tempValuesFile = `/tmp/values-${Date.now()}.yaml`;
       writeFileSync(tempValuesFile, valuesContent);
       templateArgs.push("-f", tempValuesFile);
-      
+
       const yamlOutput = executeCommand("helm", templateArgs);
-      
+
       // Clean up temp file
       unlinkSync(tempValuesFile);
-      
+
       // Step 5: Apply YAML using kubectl
       steps.push("Applying YAML using kubectl");
       const tempYamlFile = `/tmp/helm-template-${Date.now()}.yaml`;
       writeFileSync(tempYamlFile, yamlOutput);
-      
+
       try {
         executeCommand("kubectl", ["apply", "-f", tempYamlFile]);
         steps.push("Helm chart installed successfully using template mode");
@@ -232,12 +245,12 @@ async function installHelmChartTemplate(params: {
       }
     } else {
       const yamlOutput = executeCommand("helm", templateArgs);
-      
+
       // Step 5: Apply YAML using kubectl
       steps.push("Applying YAML using kubectl");
       const tempYamlFile = `/tmp/helm-template-${Date.now()}.yaml`;
       writeFileSync(tempYamlFile, yamlOutput);
-      
+
       try {
         executeCommand("kubectl", ["apply", "-f", tempYamlFile]);
         steps.push("Helm chart installed successfully using template mode");
@@ -254,10 +267,10 @@ async function installHelmChartTemplate(params: {
           text: JSON.stringify({
             status: "installed",
             message: `Helm chart '${params.name}' installed successfully using template mode`,
-            steps: steps
-          })
-        }
-      ]
+            steps: steps,
+          }),
+        },
+      ],
     };
   } catch (error: any) {
     return {
@@ -267,10 +280,10 @@ async function installHelmChartTemplate(params: {
           text: JSON.stringify({
             status: "failed",
             error: `Failed to install Helm chart using template mode: ${error.message}`,
-            steps: steps
-          })
-        }
-      ]
+            steps: steps,
+          }),
+        },
+      ],
     };
   }
 }
@@ -280,7 +293,9 @@ async function installHelmChartTemplate(params: {
  * @param params - Installation parameters
  * @returns Promise with installation result
  */
-export async function installHelmChart(params: HelmInstallOperation): Promise<{ content: { type: string; text: string }[] }> {
+export async function installHelmChart(
+  params: HelmInstallOperation
+): Promise<{ content: { type: string; text: string }[] }> {
   // Use template mode if requested
   if (params.useTemplate) {
     return installHelmChartTemplate(params);
@@ -293,25 +308,31 @@ export async function installHelmChart(params: HelmInstallOperation): Promise<{ 
       executeCommand("helm", ["repo", "add", repoName, params.repo]);
       executeCommand("helm", ["repo", "update"]);
     }
-    
-    const args = ["install", params.name, params.chart, "--namespace", params.namespace];
-    
+
+    const args = [
+      "install",
+      params.name,
+      params.chart,
+      "--namespace",
+      params.namespace,
+    ];
+
     // Add create namespace flag if requested
     if (params.createNamespace !== false) {
       args.push("--create-namespace");
     }
-    
+
     // Add values file if provided
     if (params.valuesFile) {
       args.push("-f", params.valuesFile);
     }
-    
+
     // Add values object if provided
     if (params.values) {
       const valuesContent = dump(params.values);
       const tempFile = `/tmp/values-${Date.now()}.yaml`;
       writeFileSync(tempFile, valuesContent);
-      
+
       try {
         args.push("-f", tempFile);
         executeCommand("helm", args);
@@ -328,10 +349,10 @@ export async function installHelmChart(params: HelmInstallOperation): Promise<{ 
           type: "text",
           text: JSON.stringify({
             status: "installed",
-            message: `Helm chart '${params.name}' installed successfully in namespace '${params.namespace}'`
-          })
-        }
-      ]
+            message: `Helm chart '${params.name}' installed successfully in namespace '${params.namespace}'`,
+          }),
+        },
+      ],
     };
   } catch (error: any) {
     return {
@@ -340,10 +361,10 @@ export async function installHelmChart(params: HelmInstallOperation): Promise<{ 
           type: "text",
           text: JSON.stringify({
             status: "failed",
-            error: `Failed to install Helm chart: ${error.message}`
-          })
-        }
-      ]
+            error: `Failed to install Helm chart: ${error.message}`,
+          }),
+        },
+      ],
     };
   }
 }
@@ -353,7 +374,9 @@ export async function installHelmChart(params: HelmInstallOperation): Promise<{ 
  * @param params - Upgrade parameters
  * @returns Promise with upgrade result
  */
-export async function upgradeHelmChart(params: HelmUpgradeOperation): Promise<{ content: { type: string; text: string }[] }> {
+export async function upgradeHelmChart(
+  params: HelmUpgradeOperation
+): Promise<{ content: { type: string; text: string }[] }> {
   try {
     // Add repository if provided
     if (params.repo) {
@@ -361,20 +384,26 @@ export async function upgradeHelmChart(params: HelmUpgradeOperation): Promise<{ 
       executeCommand("helm", ["repo", "add", repoName, params.repo]);
       executeCommand("helm", ["repo", "update"]);
     }
-    
-    const args = ["upgrade", params.name, params.chart, "--namespace", params.namespace];
-    
+
+    const args = [
+      "upgrade",
+      params.name,
+      params.chart,
+      "--namespace",
+      params.namespace,
+    ];
+
     // Add values file if provided
     if (params.valuesFile) {
       args.push("-f", params.valuesFile);
     }
-    
+
     // Add values object if provided
     if (params.values) {
       const valuesContent = dump(params.values);
       const tempFile = `/tmp/values-${Date.now()}.yaml`;
       writeFileSync(tempFile, valuesContent);
-      
+
       try {
         args.push("-f", tempFile);
         executeCommand("helm", args);
@@ -391,10 +420,10 @@ export async function upgradeHelmChart(params: HelmUpgradeOperation): Promise<{ 
           type: "text",
           text: JSON.stringify({
             status: "upgraded",
-            message: `Helm chart '${params.name}' upgraded successfully in namespace '${params.namespace}'`
-          })
-        }
-      ]
+            message: `Helm chart '${params.name}' upgraded successfully in namespace '${params.namespace}'`,
+          }),
+        },
+      ],
     };
   } catch (error: any) {
     return {
@@ -403,10 +432,10 @@ export async function upgradeHelmChart(params: HelmUpgradeOperation): Promise<{ 
           type: "text",
           text: JSON.stringify({
             status: "failed",
-            error: `Failed to upgrade Helm chart: ${error.message}`
-          })
-        }
-      ]
+            error: `Failed to upgrade Helm chart: ${error.message}`,
+          }),
+        },
+      ],
     };
   }
 }
@@ -416,9 +445,16 @@ export async function upgradeHelmChart(params: HelmUpgradeOperation): Promise<{ 
  * @param params - Uninstall parameters
  * @returns Promise with uninstall result
  */
-export async function uninstallHelmChart(params: HelmUninstallOperation): Promise<{ content: { type: string; text: string }[] }> {
+export async function uninstallHelmChart(
+  params: HelmUninstallOperation
+): Promise<{ content: { type: string; text: string }[] }> {
   try {
-    executeCommand("helm", ["uninstall", params.name, "--namespace", params.namespace]);
+    executeCommand("helm", [
+      "uninstall",
+      params.name,
+      "--namespace",
+      params.namespace,
+    ]);
 
     return {
       content: [
@@ -426,10 +462,10 @@ export async function uninstallHelmChart(params: HelmUninstallOperation): Promis
           type: "text",
           text: JSON.stringify({
             status: "uninstalled",
-            message: `Helm chart '${params.name}' uninstalled successfully from namespace '${params.namespace}'`
-          })
-        }
-      ]
+            message: `Helm chart '${params.name}' uninstalled successfully from namespace '${params.namespace}'`,
+          }),
+        },
+      ],
     };
   } catch (error: any) {
     return {
@@ -438,10 +474,10 @@ export async function uninstallHelmChart(params: HelmUninstallOperation): Promis
           type: "text",
           text: JSON.stringify({
             status: "failed",
-            error: `Failed to uninstall Helm chart: ${error.message}`
-          })
-        }
-      ]
+            error: `Failed to uninstall Helm chart: ${error.message}`,
+          }),
+        },
+      ],
     };
   }
 }

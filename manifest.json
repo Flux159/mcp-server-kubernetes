@@ -1,7 +1,7 @@
 {
   "manifest_version": "0.1",
   "name": "mcp-server-kubernetes",
-  "version": "2.9.1",
+  "version": "2.9.2",
   "description": "MCP server for interacting with Kubernetes clusters via kubectl",
   "long_description": "MCP Server that can connect to a Kubernetes cluster and manage it.\n\nBy default, the server loads kubeconfig from `~/.kube/config`.\n\nThe server will automatically connect to your current kubectl context. Make sure you have:\n\n1. kubectl installed and in your PATH\n2. A valid kubeconfig file with contexts configured\n3. Access to a Kubernetes cluster configured for kubectl (e.g. minikube, Rancher Desktop, GKE, etc.)\n4. Optional: Helm v3 installed and in your PATH.\n\nYou can verify your connection by asking Claude to list your pods or create a test deployment.\n\nIf you have errors open up a standard terminal and run `kubectl get pods` to see if you can connect to your cluster without credentials issues.\n\n## Features\n\n- [x] Connect to a Kubernetes cluster\n- [x] Unified kubectl API for managing resources\n- Get or list resources with `kubectl_get`\n- Describe resources with `kubectl_describe`\n- List resources with `kubectl_get`\n- Create resources with `kubectl_create`\n- Apply YAML manifests with `kubectl_apply`\n- Delete resources with `kubectl_delete`\n- Get logs with `kubectl_logs`\n- and more.",
   "author": {
@@ -19,31 +19,19 @@
   "tools": [
     {
       "name": "ping",
-      "description": "Verify that the counterpart is still responsive and the connection is alive.",
-      "annotations": {
-        "readOnlyHint": true
-      }
+      "description": "Verify that the counterpart is still responsive and the connection is alive."
     },
     {
       "name": "cleanup",
-      "description": "Cleanup all managed resources",
-      "annotations": {
-        "destructiveHint": true
-      }
+      "description": "Cleanup all managed resources"
     },
     {
       "name": "kubectl_get",
-      "description": "Get or list Kubernetes resources by resource type, name, and optionally namespace",
-      "annotations": {
-        "readOnlyHint": true
-      }
+      "description": "Get or list Kubernetes resources by resource type, name, and optionally namespace"
     },
     {
       "name": "kubectl_describe",
-      "description": "Describe Kubernetes resources by resource type, name, and optionally namespace",
-      "annotations": {
-        "readOnlyHint": true
-      }
+      "description": "Describe Kubernetes resources by resource type, name, and optionally namespace"
     },
     {
       "name": "kubectl_apply",
@@ -51,10 +39,7 @@
     },
     {
       "name": "kubectl_delete",
-      "description": "Delete Kubernetes resources by resource type, name, labels, or from a manifest file",
-      "annotations": {
-        "destructiveHint": true
-      }
+      "description": "Delete Kubernetes resources by resource type, name, labels, or from a manifest file"
     },
     {
       "name": "kubectl_create",
@@ -62,10 +47,7 @@
     },
     {
       "name": "kubectl_logs",
-      "description": "Get logs from Kubernetes resources like pods, deployments, or jobs",
-      "annotations": {
-        "readOnlyHint": true
-      }
+      "description": "Get logs from Kubernetes resources like pods, deployments, or jobs"
     },
     {
       "name": "kubectl_patch",
@@ -81,17 +63,11 @@
     },
     {
       "name": "kubectl_context",
-      "description": "Manage Kubernetes contexts - list, get, or set the current context",
-      "annotations": {
-        "readOnlyHint": true
-      }
+      "description": "Manage Kubernetes contexts - list, get, or set the current context"
     },
     {
       "name": "kubectl_generic",
-      "description": "Execute any kubectl command with the provided arguments and flags",
-      "annotations": {
-        "destructiveHint": true
-      }
+      "description": "Execute any kubectl command with the provided arguments and flags"
     },
     {
       "name": "install_helm_chart",
@@ -103,31 +79,19 @@
     },
     {
       "name": "uninstall_helm_chart",
-      "description": "Uninstall a Helm release",
-      "annotations": {
-        "destructiveHint": true
-      }
+      "description": "Uninstall a Helm release"
     },
     {
       "name": "explain_resource",
-      "description": "Get documentation for a Kubernetes resource or field",
-      "annotations": {
-        "readOnlyHint": true
-      }
+      "description": "Get documentation for a Kubernetes resource or field"
     },
     {
       "name": "list_api_resources",
-      "description": "List the API resources available in the cluster",
-      "annotations": {
-        "readOnlyHint": true
-      }
+      "description": "List the API resources available in the cluster"
     },
     {
       "name": "node_management",
-      "description": "Manage Kubernetes nodes with cordon, drain, and uncordon operations",
-      "annotations": {
-        "destructiveHint": true
-      }
+      "description": "Manage Kubernetes nodes with cordon, drain, and uncordon operations"
     },
     {
       "name": "exec_in_pod",

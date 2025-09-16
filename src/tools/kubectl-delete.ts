@@ -5,12 +5,18 @@ import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
 import { getSpawnMaxBuffer } from "../config/max-buffer.js";
-import { contextParameter, namespaceParameter } from "../models/common-parameters.js";
+import {
+  contextParameter,
+  namespaceParameter,
+} from "../models/common-parameters.js";
 
 export const kubectlDeleteSchema = {
   name: "kubectl_delete",
   description:
     "Delete Kubernetes resources by resource type, name, labels, or from a manifest file",
+  annotations: {
+    destructiveHint: true,
+  },
   inputSchema: {
     type: "object",
     properties: {

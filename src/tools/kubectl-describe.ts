@@ -2,12 +2,18 @@ import { KubernetesManager } from "../types.js";
 import { execFileSync } from "child_process";
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import { getSpawnMaxBuffer } from "../config/max-buffer.js";
-import { namespaceParameter, contextParameter } from "../models/common-parameters.js";
+import {
+  namespaceParameter,
+  contextParameter,
+} from "../models/common-parameters.js";
 
 export const kubectlDescribeSchema = {
   name: "kubectl_describe",
   description:
     "Describe Kubernetes resources by resource type, name, and optionally namespace",
+  annotations: {
+    readOnlyHint: true,
+  },
   inputSchema: {
     type: "object",
     properties: {

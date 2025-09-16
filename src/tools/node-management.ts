@@ -1,7 +1,7 @@
 /**
  * Tool: node_management
  * Manage Kubernetes nodes with cordon, drain, and uncordon operations.
- * Provides safety features for node operations and implements proper error handling 
+ * Provides safety features for node operations and implements proper error handling
  * and confirmation requirements for destructive operations.
  * Note: Use kubectl_get with resourceType="nodes" to list nodes.
  */
@@ -23,7 +23,11 @@ import { getSpawnMaxBuffer } from "../config/max-buffer.js";
  */
 export const nodeManagementSchema = {
   name: "node_management",
-  description: "Manage Kubernetes nodes with cordon, drain, and uncordon operations",
+  description:
+    "Manage Kubernetes nodes with cordon, drain, and uncordon operations",
+  annotations: {
+    destructiveHint: true,
+  },
   inputSchema: {
     type: "object",
     properties: {
@@ -34,21 +38,25 @@ export const nodeManagementSchema = {
       },
       nodeName: {
         type: "string",
-        description: "Name of the node to operate on (required for cordon, drain, uncordon)",
+        description:
+          "Name of the node to operate on (required for cordon, drain, uncordon)",
       },
       force: {
         type: "boolean",
-        description: "Force the operation even if there are pods not managed by a ReplicationController, ReplicaSet, Job, DaemonSet or StatefulSet (for drain operation)",
+        description:
+          "Force the operation even if there are pods not managed by a ReplicationController, ReplicaSet, Job, DaemonSet or StatefulSet (for drain operation)",
         default: false,
       },
       gracePeriod: {
         type: "number",
-        description: "Period of time in seconds given to each pod to terminate gracefully (for drain operation). If set to -1, uses the kubectl default grace period.",
+        description:
+          "Period of time in seconds given to each pod to terminate gracefully (for drain operation). If set to -1, uses the kubectl default grace period.",
         default: -1,
       },
       deleteLocalData: {
         type: "boolean",
-        description: "Delete local data even if emptyDir volumes are used (for drain operation)",
+        description:
+          "Delete local data even if emptyDir volumes are used (for drain operation)",
         default: false,
       },
       ignoreDaemonsets: {
@@ -58,17 +66,20 @@ export const nodeManagementSchema = {
       },
       timeout: {
         type: "string",
-        description: "The length of time to wait before giving up (for drain operation, e.g., '5m', '1h')",
+        description:
+          "The length of time to wait before giving up (for drain operation, e.g., '5m', '1h')",
         default: "0",
       },
       dryRun: {
         type: "boolean",
-        description: "Show what would be done without actually doing it (for drain operation)",
+        description:
+          "Show what would be done without actually doing it (for drain operation)",
         default: false,
       },
       confirmDrain: {
         type: "boolean",
-        description: "Explicit confirmation to drain the node (required for drain operation)",
+        description:
+          "Explicit confirmation to drain the node (required for drain operation)",
         default: false,
       },
     },
@@ -119,14 +130,18 @@ const executeCommand = (command: string, args: string[]): string => {
  */
 const getNodeStatus = (nodeName: string): any => {
   try {
-    const output = executeCommand("kubectl", ["get", "node", nodeName, "-o", "json"]);
+    const output = executeCommand("kubectl", [
+      "get",
+      "node",
+      nodeName,
+      "-o",
+      "json",
+    ]);
     return JSON.parse(output);
   } catch (error: any) {
     throw new Error(`Failed to get node status: ${error.message}`);
   }
 };
-
-
 
 /**
  * Main node_management function that handles all node operations.
@@ -146,7 +161,7 @@ export async function nodeManagement(
     ignoreDaemonsets = true,
     timeout = "0",
     dryRun = false,
-    confirmDrain = false
+    confirmDrain = false,
   } = params;
 
   try {
@@ -164,7 +179,7 @@ export async function nodeManagement(
           ignoreDaemonsets,
           timeout,
           dryRun,
-          confirmDrain
+          confirmDrain,
         });
       default:
         throw new Error(`Unknown operation: ${operation}`);
@@ -174,21 +189,21 @@ export async function nodeManagement(
       content: [
         {
           type: "text",
-          text: `Node management operation failed: ${error.message}`
-        }
-      ]
+          text: `Node management operation failed: ${error.message}`,
+        },
+      ],
     };
   }
 }
-
-
 
 /**
  * Handle the cordon node operation.
  * @param nodeName - Name of the node to cordon
  * @returns Promise with cordon operation results
  */
-async function handleCordonNode(nodeName: string): Promise<{ content: { type: string; text: string }[] }> {
+async function handleCordonNode(
+  nodeName: string
+): Promise<{ content: { type: string; text: string }[] }> {
   try {
     // Check if node exists and get current status
     const nodeStatus = getNodeStatus(nodeName);
@@ -199,9 +214,9 @@ async function handleCordonNode(nodeName: string): Promise<{ content: { type: st
         content: [
           {
             type: "text",
-            text: `Node '${nodeName}' is already cordoned (unschedulable)`
-          }
-        ]
+            text: `Node '${nodeName}' is already cordoned (unschedulable)`,
+          },
+        ],
       };
     }
 
@@ -212,9 +227,9 @@ async function handleCordonNode(nodeName: string): Promise<{ content: { type: st
       content: [
         {
           type: "text",
-          text: `Successfully cordoned node '${nodeName}'. The node is now unschedulable.`
-        }
-      ]
+          text: `Successfully cordoned node '${nodeName}'. The node is now unschedulable.`,
+        },
+      ],
     };
   } catch (error: any) {
     throw new Error(`Failed to cordon node: ${error.message}`);
@@ -226,7 +241,9 @@ async function handleCordonNode(nodeName: string): Promise<{ content: { type: st
  * @param nodeName - Name of the node to uncordon
  * @returns Promise with uncordon operation results
  */
-async function handleUncordonNode(nodeName: string): Promise<{ content: { type: string; text: string }[] }> {
+async function handleUncordonNode(
+  nodeName: string
+): Promise<{ content: { type: string; text: string }[] }> {
   try {
     // Check if node exists and get current status
     const nodeStatus = getNodeStatus(nodeName);
@@ -237,9 +254,9 @@ async function handleUncordonNode(nodeName: string): Promise<{ content: { type: 
         content: [
           {
             type: "text",
-            text: `Node '${nodeName}' is already uncordoned (schedulable)`
-          }
-        ]
+            text: `Node '${nodeName}' is already uncordoned (schedulable)`,
+          },
+        ],
       };
     }
 
@@ -250,9 +267,9 @@ async function handleUncordonNode(nodeName: string): Promise<{ content: { type: 
       content: [
         {
           type: "text",
-          text: `Successfully uncordoned node '${nodeName}'. The node is now schedulable.`
-        }
-      ]
+          text: `Successfully uncordoned node '${nodeName}'. The node is now schedulable.`,
+        },
+      ],
     };
   } catch (error: any) {
     throw new Error(`Failed to uncordon node: ${error.message}`);
@@ -282,7 +299,7 @@ async function handleDrainNode(params: {
     ignoreDaemonsets,
     timeout,
     dryRun,
-    confirmDrain
+    confirmDrain,
   } = params;
 
   try {
@@ -295,9 +312,9 @@ async function handleDrainNode(params: {
         content: [
           {
             type: "text",
-            text: `Node '${nodeName}' is already cordoned (unschedulable). Drain operation may not be necessary.`
-          }
-        ]
+            text: `Node '${nodeName}' is already cordoned (unschedulable). Drain operation may not be necessary.`,
+          },
+        ],
       };
     }
 
@@ -307,17 +324,18 @@ async function handleDrainNode(params: {
         content: [
           {
             type: "text",
-            text: `Drain operation requires explicit confirmation. Set confirmDrain=true to proceed with draining node '${nodeName}'.`
-          }
-        ]
+            text: `Drain operation requires explicit confirmation. Set confirmDrain=true to proceed with draining node '${nodeName}'.`,
+          },
+        ],
       };
     }
 
     // Build drain command arguments
     const drainArgs = ["drain", nodeName];
-    
+
     if (force) drainArgs.push("--force");
-    if (gracePeriod >= 0) drainArgs.push("--grace-period", gracePeriod.toString());
+    if (gracePeriod >= 0)
+      drainArgs.push("--grace-period", gracePeriod.toString());
     if (deleteLocalData) drainArgs.push("--delete-local-data");
     if (ignoreDaemonsets) drainArgs.push("--ignore-daemonsets");
     if (timeout !== "0") drainArgs.push("--timeout", timeout);
@@ -331,9 +349,9 @@ async function handleDrainNode(params: {
         content: [
           {
             type: "text",
-            text: `Dry run drain operation for node '${nodeName}':\n\n${drainOutput}\n\nTo perform the actual drain, set dryRun=false and confirmDrain=true.`
-          }
-        ]
+            text: `Dry run drain operation for node '${nodeName}':\n\n${drainOutput}\n\nTo perform the actual drain, set dryRun=false and confirmDrain=true.`,
+          },
+        ],
       };
     }
 
@@ -341,11 +359,11 @@ async function handleDrainNode(params: {
       content: [
         {
           type: "text",
-          text: `Successfully drained node '${nodeName}'.\n\n${drainOutput}`
-        }
-      ]
+          text: `Successfully drained node '${nodeName}'.\n\n${drainOutput}`,
+        },
+      ],
     };
   } catch (error: any) {
     throw new Error(`Failed to drain node: ${error.message}`);
   }
-} 
+}

@@ -2,12 +2,18 @@ import { KubernetesManager } from "../types.js";
 import { execFileSync } from "child_process";
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import { getSpawnMaxBuffer } from "../config/max-buffer.js";
-import { contextParameter, namespaceParameter } from "../models/common-parameters.js";
+import {
+  contextParameter,
+  namespaceParameter,
+} from "../models/common-parameters.js";
 
 export const kubectlLogsSchema = {
   name: "kubectl_logs",
   description:
     "Get logs from Kubernetes resources like pods, deployments, or jobs",
+  annotations: {
+    readOnlyHint: true,
+  },
   inputSchema: {
     type: "object",
     properties: {

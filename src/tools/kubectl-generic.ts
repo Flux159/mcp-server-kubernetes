@@ -2,12 +2,18 @@ import { KubernetesManager } from "../types.js";
 import { execFileSync } from "child_process";
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import { getSpawnMaxBuffer } from "../config/max-buffer.js";
-import { contextParameter, namespaceParameter } from "../models/common-parameters.js";
+import {
+  contextParameter,
+  namespaceParameter,
+} from "../models/common-parameters.js";
 
 export const kubectlGenericSchema = {
   name: "kubectl_generic",
   description:
     "Execute any kubectl command with the provided arguments and flags",
+  annotations: {
+    destructiveHint: true,
+  },
   inputSchema: {
     type: "object",
     properties: {

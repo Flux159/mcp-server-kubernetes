@@ -3,12 +3,18 @@ import { execFileSync } from "child_process";
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import { getSpawnMaxBuffer } from "../config/max-buffer.js";
 import * as yaml from "js-yaml";
-import { contextParameter, namespaceParameter } from "../models/common-parameters.js";
+import {
+  contextParameter,
+  namespaceParameter,
+} from "../models/common-parameters.js";
 
 export const kubectlGetSchema = {
   name: "kubectl_get",
   description:
     "Get or list Kubernetes resources by resource type, name, and optionally namespace",
+  annotations: {
+    readOnlyHint: true,
+  },
   inputSchema: {
     type: "object",
     properties: {
@@ -48,7 +54,7 @@ export const kubectlGetSchema = {
         description:
           "Sort events by a field (default: lastTimestamp). Only applicable for events.",
       },
-      context: contextParameter
+      context: contextParameter,
     },
     required: ["resourceType", "name", "namespace"],
   },
@@ -156,9 +162,10 @@ export async function kubectlGet(
       });
 
       // Apply secrets masking if enabled and dealing with secrets
-      const shouldMaskSecrets = process.env.MASK_SECRETS !== "false" && 
+      const shouldMaskSecrets =
+        process.env.MASK_SECRETS !== "false" &&
         (resourceType === "secrets" || resourceType === "secret");
-      
+
       let processedResult = result;
       if (shouldMaskSecrets) {
         processedResult = maskSecretsData(result, output);
@@ -332,20 +339,19 @@ function isNonNamespacedResource(resourceType: string): boolean {
 
 /**
  * Recursively traverses an object and masks values in 'data' sections of Kubernetes secrets.
- * 
+ *
  * @param {any} obj - The object to traverse. Can be an array, object, or primitive value.
  * @returns {any} A new object with masked values in 'data' sections.
  */
 function maskDataValues(obj: any): any {
-  
   if (obj == null) {
     return obj;
   }
-  
+
   if (Array.isArray(obj)) {
-    return obj.map(item => maskDataValues(item));
+    return obj.map((item) => maskDataValues(item));
   }
-  
+
   if (typeof obj === "object") {
     const result: any = {};
     for (const key in obj) {
@@ -358,27 +364,27 @@ function maskDataValues(obj: any): any {
     }
     return result;
   }
-  
+
   return obj;
 }
 
 /**
  * Recursively masks all leaf values (non-object, non-array values) in an object structure.
- * 
+ *
  * @param {any} obj - The input object or value to process.
  * @returns {any} A new object or value with all leaf values replaced by a mask.
  */
 function maskAllLeafValues(obj: any): any {
   const maskValue = "***";
-  
+
   if (obj == null) {
     return obj;
   }
-  
+
   if (Array.isArray(obj)) {
-    return obj.map(item => maskAllLeafValues(item));
+    return obj.map((item) => maskAllLeafValues(item));
   }
-  
+
   if (typeof obj === "object") {
     const result: any = {};
     for (const key in obj) {
@@ -386,7 +392,7 @@ function maskAllLeafValues(obj: any): any {
     }
     return result;
   }
-  
+
   // This is a leaf value (string, number, boolean) - mask it
   return maskValue;
 }
@@ -409,15 +415,15 @@ function maskSecretsData(output: string, format: string): string {
       // Parse YAML to JSON, mask, then convert back to YAML
       const parsed = yaml.load(output);
       const masked = maskDataValues(parsed);
-      return yaml.dump(masked, { 
+      return yaml.dump(masked, {
         indent: 2,
         lineWidth: -1, // Don't wrap lines
-        noRefs: true   // Don't use references
+        noRefs: true, // Don't use references
       });
     }
   } catch (error) {
     console.warn("Failed to parse secrets output for masking:", error);
   }
-  
+
   return output;
 }

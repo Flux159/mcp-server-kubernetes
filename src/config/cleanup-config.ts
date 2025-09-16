@@ -5,4 +5,7 @@ export const cleanupSchema = {
     type: "object",
     properties: {},
   },
+  annotations: {
+    destructiveHint: true,
+  },
 } as const;

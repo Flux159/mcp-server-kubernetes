@@ -7,6 +7,9 @@ export const pingSchema = {
     properties: {},
     required: [],
   },
+  annotations: {
+    readOnlyHint: true,
+  },
 };
 
 export async function ping(): Promise<Record<string, never>> {

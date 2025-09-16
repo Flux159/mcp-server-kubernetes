@@ -7,6 +7,9 @@ export const kubectlContextSchema = {
   name: "kubectl_context",
   description:
     "Manage Kubernetes contexts - list, get, or set the current context",
+  annotations: {
+    readOnlyHint: true,
+  },
   inputSchema: {
     type: "object",
     properties: {
@@ -88,7 +91,13 @@ export async function kubectlContext(
           const authInfoPos = headerLine.indexOf("AUTHINFO");
           const namespacePos = headerLine.indexOf("NAMESPACE");
 
-          if (currentPos === -1 || namePos === -1 || clusterPos === -1 || authInfoPos === -1 || namespacePos === -1) {
+          if (
+            currentPos === -1 ||
+            namePos === -1 ||
+            clusterPos === -1 ||
+            authInfoPos === -1 ||
+            namespacePos === -1
+          ) {
             throw new McpError(
               ErrorCode.InvalidParams,
               "Invalid kubectl output format"
@@ -101,15 +110,18 @@ export async function kubectlContext(
             if (line.trim() === "") continue; // Skip empty lines
 
             // Extract fields based on column positions
-            const isCurrent = line.substring(currentPos, namePos).trim() === "*";
+            const isCurrent =
+              line.substring(currentPos, namePos).trim() === "*";
             const name = line.substring(namePos, clusterPos).trim();
             const cluster = line.substring(clusterPos, authInfoPos).trim();
-            const authInfo = namespacePos > 0
-              ? line.substring(authInfoPos, namespacePos).trim()
-              : line.substring(authInfoPos).trim();
-            const namespace = namespacePos > 0
-              ? line.substring(namespacePos).trim() || "default"
-              : "default";
+            const authInfo =
+              namespacePos > 0
+                ? line.substring(authInfoPos, namespacePos).trim()
+                : line.substring(authInfoPos).trim();
+            const namespace =
+              namespacePos > 0
+                ? line.substring(namespacePos).trim() || "default"
+                : "default";
 
             contexts.push({
               name: name,

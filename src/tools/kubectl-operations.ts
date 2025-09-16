@@ -9,6 +9,9 @@ import { contextParameter } from "../models/common-parameters.js";
 export const explainResourceSchema = {
   name: "explain_resource",
   description: "Get documentation for a Kubernetes resource or field",
+  annotations: {
+    readOnlyHint: true,
+  },
   inputSchema: {
     type: "object",
     properties: {
@@ -41,6 +44,9 @@ export const explainResourceSchema = {
 export const listApiResourcesSchema = {
   name: "list_api_resources",
   description: "List the API resources available in the cluster",
+  annotations: {
+    readOnlyHint: true,
+  },
   inputSchema: {
     type: "object",
     properties: {
@@ -88,7 +94,7 @@ const executeKubectlCommand = (command: string, args: string[]): string => {
 };
 
 export async function explainResource(
-  params: ExplainResourceParams,
+  params: ExplainResourceParams
 ): Promise<{ content: { type: string; text: string }[] }> {
   try {
     const command = "kubectl";
@@ -128,7 +134,7 @@ export async function explainResource(
 }
 
 export async function listApiResources(
-  params: ListApiResourcesParams,
+  params: ListApiResourcesParams
 ): Promise<{ content: { type: string; text: string }[] }> {
   try {
     const command = "kubectl";
