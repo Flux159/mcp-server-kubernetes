@@ -8,14 +8,13 @@
     "name": "Flux159",
     "url": "https://github.com/Flux159/"
   },
+  "privacy_policies": ["https://www.linuxfoundation.org/legal/privacy-policy"],
   "server": {
     "type": "node",
     "entry_point": "dist/index.js",
     "mcp_config": {
       "command": "node",
-      "args": [
-        "${__dirname}/dist/index.js"
-      ]
+      "args": ["${__dirname}/dist/index.js"]
     }
   },
   "tools": [
@@ -108,12 +107,7 @@
       "description": "Stop a port-forward process"
     }
   ],
-  "keywords": [
-    "kubernetes",
-    "docker",
-    "containers",
-    "containerization"
-  ],
+  "keywords": ["kubernetes", "docker", "containers", "containerization"],
   "license": "MIT",
   "repository": {
     "type": "git",
