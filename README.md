@@ -58,6 +58,12 @@ Add the following configuration to your Claude Desktop config file:
 }
 ```
 
+### Claude Desktop Connector via mcpb
+
+MCP Server Kubernetes is also available as a [mcpb](https://github.com/anthropics/mcpb) (formerly dxt) extension. In Claude Desktop, go to Settings (`Cmd+,` on Mac) -> Extensions -> Browse Extensions and scroll to find mcp-server-kubernetes in the modal. Install it & it will install & utilize kubectl via command line & your kubeconfig.
+
+To manually install, you can also get the .mcpb by going to the latest [Release](https://github.com/Flux159/mcp-server-kubernetes/releases) and downloading it.
+
 ### VS Code
 
 [![Install Kubernetes MCP in VS Code](https://img.shields.io/badge/Install%20Kubernetes%20MCP%20in%20VS%20Code-blue?logo=visualstudiocode)](vscode:mcp/install?%7B%22name%22%3A%20%22kubernetes%22%2C%20%22type%22%3A%20%22stdio%22%2C%20%22command%22%3A%20%22npx%22%2C%20%22args%22%3A%20%5B%22mcp-server-kubernetes%22%5D%7D)
