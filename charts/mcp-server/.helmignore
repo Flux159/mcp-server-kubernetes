@@ -1,0 +1,13 @@
+.git/
+.github/
+.vscode/
+node_modules/
+src/
+tests/
+*.log
+*.ts
+*.md
+*.lockb
+*.json
+*.js
+*.config.ts
