@@ -1,7 +1,7 @@
 replicaCount: 1
 
 image:
-  repository: mcp/kubernetes
+  repository: flux159/mcp-server-kubernetes
   pullPolicy: IfNotPresent
   tag: "latest"
 
@@ -9,9 +9,10 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
+# service account to manage permissions of the MCP server
 serviceAccount:
-  create: false
   annotations: {}
+  # your created service account name bound to the respective cluster role
   name: "mcp"
 
 podAnnotations: {}
@@ -54,3 +55,8 @@ tolerations: []
 affinity: {}
 
 readOnlyTools: false
+
+port: 3000
+
+# adjust as needed depending on the size of the cluster. This is 1MB. Recommended 5MB for large clusters.
+spawnMaxBuffer: "1048576"

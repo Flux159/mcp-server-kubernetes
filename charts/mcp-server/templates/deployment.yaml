@@ -38,9 +38,13 @@ spec:
               value: "1"
             - name: HOST
               value: 0.0.0.0
+            - name: PORT
+              value: "{{ .Values.port  }}"
+            - name: "SPAWN_MAX_BUFFER"
+              value: "{{ .Values.spawnMaxBuffer }}"
           ports:
             - name: http
-              containerPort: 3000
+              containerPort: {{ .Values.port }}
               protocol: TCP
           resources:
             {{- toYaml .Values.resources | nindent 12 }}

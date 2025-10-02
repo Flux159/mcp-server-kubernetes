@@ -7,7 +7,7 @@ spec:
   type: {{ .Values.service.type }}
   ports:
     - port: {{ .Values.service.port }}
-      targetPort: 3000
+      targetPort: {{ .Values.port }}
       protocol: TCP
       name: http
   selector: {{- include "mcp-server.selectorLabels" . | nindent 4 }}
