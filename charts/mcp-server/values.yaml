@@ -17,11 +17,9 @@ serviceAccount:
 
 podAnnotations: {}
 
-podSecurityContext:
-  {}
+podSecurityContext: {}
 
-securityContext:
-  {}
+securityContext: {}
 
 service:
   type: ClusterIP
@@ -30,8 +28,7 @@ service:
 ingress:
   enabled: false
   className: ""
-  annotations:
-    {}
+  annotations: {}
   hosts:
     - host: chart-example.local
       paths:
@@ -39,8 +36,7 @@ ingress:
           pathType: ImplementationSpecific
   tls: []
 
-resources:
-  {}
+resources: {}
 
 autoscaling:
   enabled: true

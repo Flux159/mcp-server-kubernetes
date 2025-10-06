@@ -9,4 +9,5 @@ data:
   ENABLE_UNSAFE_STREAMABLE_HTTP_TRANSPORT: "1"
   HOST: "0.0.0.0"
   PORT: "{{ .Values.port }}"
-  SPAWN_MAX_BUFFER: "{{ .Values.spawnMaxBuffer }}"
+  SPAWN_MAX_BUFFER: "{{ .Values.spawnMaxBuffer  }}"
+  
