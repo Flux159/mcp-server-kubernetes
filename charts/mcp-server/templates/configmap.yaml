@@ -10,4 +10,3 @@ data:
   HOST: "0.0.0.0"
   PORT: "{{ .Values.port }}"
   SPAWN_MAX_BUFFER: "{{ .Values.spawnMaxBuffer  }}"
-  
