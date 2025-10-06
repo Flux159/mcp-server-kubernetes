@@ -31,17 +31,9 @@ spec:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          env:
-            - name: READ_ONLY_TOOLS
-              value: "{{ .Values.readOnlyTools }}"
-            - name: ENABLE_UNSAFE_STREAMABLE_HTTP_TRANSPORT
-              value: "1"
-            - name: HOST
-              value: 0.0.0.0
-            - name: PORT
-              value: "{{ .Values.port  }}"
-            - name: "SPAWN_MAX_BUFFER"
-              value: "{{ .Values.spawnMaxBuffer }}"
+          envFrom:
+            - configMapRef:
+                name: {{ include "mcp-server.fullname" . }}-config
           ports:
             - name: http
               containerPort: {{ .Values.port }}

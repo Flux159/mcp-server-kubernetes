@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "mcp-server.fullname" . }}-config
+  labels:
+    {{- include "mcp-server.labels" . | nindent 4 }}
+data:
+  READ_ONLY_TOOLS: "{{ .Values.readOnlyTools }}"
+  ENABLE_UNSAFE_STREAMABLE_HTTP_TRANSPORT: "1"
+  HOST: "0.0.0.0"
+  PORT: "{{ .Values.port }}"
+  SPAWN_MAX_BUFFER: "{{ .Values.spawnMaxBuffer }}"
