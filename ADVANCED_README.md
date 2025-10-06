@@ -428,3 +428,15 @@ SSE transport exposes an http endpoint that can be accessed by anyone with the U
   }
 }
 ```
+
+### Deploying in a Kubernetes Cluster with Helm (In-cluster)
+
+You can deploy the MCP server directly into your Kubernetes cluster using the provided Helm chart. When deployed this way, it will automatically use in-cluster authentication via the pod's service account.
+
+Install the chart from the local directory:
+
+```shell
+helm install mcp-server ./charts/mcp-server
+```
+
+This command installs the server in the default namespace. You can customize the deployment by modifying the values.yaml file or by using the --set flag during installation.
