@@ -56,3 +56,6 @@ port: 3000
 
 # adjust as needed depending on the size of the cluster. This is 1MB. Recommended 5MB for large clusters.
 spawnMaxBuffer: "1048576"
+
+# base64 encoded kubeconfig YAML file.
+kubecfg: ""

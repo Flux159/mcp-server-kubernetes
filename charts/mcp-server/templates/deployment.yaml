@@ -22,7 +22,9 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      {{- if not .Values.kubecfg }}
       serviceAccountName: {{ include "mcp-server.serviceAccountName" . }}
+      {{- end }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
@@ -34,6 +36,10 @@ spec:
           envFrom:
             - configMapRef:
                 name: {{ include "mcp-server.fullname" . }}-config
+          {{- if .Values.kubecfg }}
+            - secretRef:
+                name: {{ include "mcp-server.fullname" . }}-kubeconfig
+          {{- end }}
           ports:
             - name: http
               containerPort: {{ .Values.port }}
