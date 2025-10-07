@@ -57,5 +57,5 @@ port: 3000
 # adjust as needed depending on the size of the cluster. This is 5MB, which is usually sufficient for large clusters.
 spawnMaxBuffer: "5242880"
 
-# base64 encoded kubeconfig YAML file.
+# base64 encoded kubeconfig YAML file. If this is set, it will be used instead of the service account.
 kubecfg: ""
