@@ -440,3 +440,25 @@ helm install mcp-server ./charts/mcp-server
 ```
 
 This command installs the server in the default namespace. You can customize the deployment by modifying the values.yaml file or by using the --set flag during installation.
+
+### Deploying in a Kubernetes Cluster with Helm (Kubeconfig)
+
+You can deploy the MCP server directly in your Kubernetes cluster using the provided Helm chart pointing to another Kubernetes Cluster via a Kubeconfig file.
+
+In the `values.yaml` file set your base64 encoded kubeconfig for the key `kubecfg`. For this you can use:
+
+```shell
+cat <kubeconfig_path> | base64 -w0
+```
+
+and copy the output to the field.
+
+Install the chart from the local directory:
+
+```shell
+helm install mcp-server ./charts/mcp-server
+```
+
+You can customize the deployment by modifying the values.yaml file or by using the --set flag during installation.
+
+**Note**: The Kubernetes API Server the MCP Server talks to needs to be reachable from your deployed cluster.
