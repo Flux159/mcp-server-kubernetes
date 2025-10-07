@@ -54,8 +54,8 @@ readOnlyTools: false
 
 port: 3000
 
-# adjust as needed depending on the size of the cluster. This is 1MB. Recommended 5MB for large clusters.
-spawnMaxBuffer: "1048576"
+# adjust as needed depending on the size of the cluster. This is 5MB, which is usually sufficient for large clusters.
+spawnMaxBuffer: "5242880"
 
 # base64 encoded kubeconfig YAML file.
 kubecfg: ""
