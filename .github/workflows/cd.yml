@@ -21,6 +21,16 @@ jobs:
       - name: Install dependencies
         run: bun install
 
+      - name: Set up Helm
+        uses: azure/setup-helm@v4.3.0
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Set up Minikube
         run: |
           curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
@@ -97,6 +107,15 @@ jobs:
           npm publish
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Update, Package and Push Helm chart to GHCR
+        run: |
+          yq e -i '.version = "${{ steps.version.outputs.current-version }}"' ./helm-chart/Chart.yaml
+          yq e -i '.appVersion = "${{ steps.version.outputs.current-version }}"' ./helm-chart/Chart.yaml
+
+          # Package the chart and push it to GitHub Packages (ghcr.io).
+          helm package ./helm-chart
+          helm push *.tgz oci://ghcr.io/${{ github.repository_owner }}
 
       - name: Build dxt
         run: |
