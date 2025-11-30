@@ -522,8 +522,9 @@ server.setRequestHandler(
             input as {
               name: string;
               namespace?: string;
-              command: string | string[];
+              command: string[];
               container?: string;
+              timeout?: number;
               context?: string;
             }
           );

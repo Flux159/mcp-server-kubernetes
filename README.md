@@ -12,6 +12,10 @@
 [![Trust Score](https://archestra.ai/mcp-catalog/api/badge/quality/Flux159/mcp-server-kubernetes)](https://archestra.ai/mcp-catalog/flux159__mcp-server-kubernetes)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Flux159/mcp-server-kubernetes)
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Flux159/mcp-server-kubernetes/refs/heads/main/icon.png" width="200">
+</p>
+
 MCP Server that can connect to a Kubernetes cluster and manage it. Supports loading kubeconfig from multiple sources in priority order.
 
 https://github.com/user-attachments/assets/f25f8f4e-4d04-479b-9ae0-5dac452dd2ed
@@ -122,6 +126,14 @@ Windows:
 
 ```shell
 npx mcp-chat --config "%APPDATA%\Claude\claude_desktop_config.json"
+```
+
+## Gemini CLI
+
+[Gemini CLI](https://geminicli.com/) allows you to install mcp servers as extensions. From a shell, install the extension by pointing to this repo:
+
+```shell
+gemini extensions install https://github.com/Flux159/mcp-server-kubernetes
 ```
 
 ## Features

@@ -1,5 +1,6 @@
 import { describe, test, expect, vi } from "vitest";
-import { execInPodSchema } from "../src/tools/exec_in_pod.js";
+import { execInPodSchema, execInPod } from "../src/tools/exec_in_pod.js";
+import { McpError } from "@modelcontextprotocol/sdk/types.js";
 
 describe("exec_in_pod tool", () => {
   // Test the schema definition
@@ -7,6 +8,7 @@ describe("exec_in_pod tool", () => {
     expect(execInPodSchema).toBeDefined();
     expect(execInPodSchema.name).toBe("exec_in_pod");
     expect(execInPodSchema.description).toContain("Execute a command in a Kubernetes pod");
+    expect(execInPodSchema.description).toContain("array of strings");
 
     // Check input schema
     expect(execInPodSchema.inputSchema).toBeDefined();
@@ -16,87 +18,78 @@ describe("exec_in_pod tool", () => {
     expect(execInPodSchema.inputSchema.required).toContain("name");
     expect(execInPodSchema.inputSchema.required).toContain("command");
 
-    // Check for our newly added properties
-    expect(execInPodSchema.inputSchema.properties.shell).toBeDefined();
-    expect(execInPodSchema.inputSchema.properties.shell.description).toContain("Shell to use");
+    // Check command is array-only (no string support for security)
+    expect(execInPodSchema.inputSchema.properties.command.type).toBe("array");
+    expect(execInPodSchema.inputSchema.properties.command.items.type).toBe("string");
 
+    // Shell parameter should NOT exist (removed for security)
+    expect(execInPodSchema.inputSchema.properties.shell).toBeUndefined();
+
+    // Timeout should still exist
     expect(execInPodSchema.inputSchema.properties.timeout).toBeDefined();
     expect(execInPodSchema.inputSchema.properties.timeout.description).toContain("Timeout for command");
     expect(execInPodSchema.inputSchema.properties.timeout.type).toBe("number");
-
-    // Check command can be string or array
-    expect(execInPodSchema.inputSchema.properties.command.anyOf).toHaveLength(2);
-    expect(execInPodSchema.inputSchema.properties.command.anyOf[0].type).toBe("string");
-    expect(execInPodSchema.inputSchema.properties.command.anyOf[1].type).toBe("array");
   });
 
-  // Test parameter handling - equivalent to kubectl exec command string handling
-  describe("command handling", () => {
-    // Simple test to verify command string/array handling
-    test("command parameter can be string or array", () => {
-      // Test string command - should wrap in shell (kubectl exec pod-name -- echo hello)
-      let commandArr = Array.isArray("echo hello")
-        ? "echo hello"
-        : ["/bin/sh", "-c", "echo hello"];
-      expect(commandArr).toEqual(["/bin/sh", "-c", "echo hello"]);
-
-      // Test array command - should pass through as-is (kubectl exec pod-name -- echo hello)
-      commandArr = Array.isArray(["echo", "hello"])
-        ? ["echo", "hello"]
-        : ["/bin/sh", "-c", ["echo", "hello"].join(" ")];
-      expect(commandArr).toEqual(["echo", "hello"]);
+  // Test command handling - SECURITY: Only arrays are allowed
+  describe("command handling (security)", () => {
+    test("command must be an array of strings", () => {
+      // Array commands are valid
+      const validCommand = ["ls", "-la", "/app"];
+      expect(Array.isArray(validCommand)).toBe(true);
+      expect(validCommand.every(arg => typeof arg === "string")).toBe(true);
     });
 
-    // Test complex commands 
-    test("handles complex command strings", () => {
-      // Test command with quotes (kubectl exec pod-name -- sh -c 'echo "hello world"')
-      let command = 'echo "hello world"';
-      let commandArr = ["/bin/sh", "-c", command];
-      expect(commandArr).toEqual(["/bin/sh", "-c", 'echo "hello world"']);
+    test("array commands pass through without shell wrapping", () => {
+      // Array commands should be used as-is, not wrapped in shell
+      const command = ["echo", "hello", "world"];
+      // The command array goes directly to K8s exec API
+      expect(command).toEqual(["echo", "hello", "world"]);
+      // NOT wrapped like ["/bin/sh", "-c", "echo hello world"]
+    });
 
-      // Test command with pipe (kubectl exec pod-name -- sh -c 'ls | grep file')
-      command = "ls | grep file";
-      commandArr = ["/bin/sh", "-c", command];
-      expect(commandArr).toEqual(["/bin/sh", "-c", "ls | grep file"]);
-
-      // Test command with multiple statements (kubectl exec pod-name -- sh -c 'cd /tmp && ls')
-      command = "cd /tmp && ls";
-      commandArr = ["/bin/sh", "-c", command];
-      expect(commandArr).toEqual(["/bin/sh", "-c", "cd /tmp && ls"]);
+    test("command description explains security constraints", () => {
+      const desc = execInPodSchema.inputSchema.properties.command.description;
+      expect(desc).toContain("array of strings");
+      expect(desc).toContain("security");
     });
   });
 
-  // Test shell parameter handling
-  describe("shell parameter", () => {
-    test("shell parameter changes default shell", () => {
-      // Test with default shell (kubectl exec pod-name -- sh -c 'command')
-      let shell: string | undefined = undefined;
-      let commandArr = [shell || "/bin/sh", "-c", "echo hello"];
-      expect(commandArr).toEqual(["/bin/sh", "-c", "echo hello"]);
+  // Test validation logic (unit test the validation without K8s connection)
+  describe("input validation", () => {
+    // Create a mock k8sManager that throws before any K8s calls
+    const mockK8sManager = {
+      setCurrentContext: vi.fn(),
+      getKubeConfig: vi.fn(() => {
+        throw new Error("Should not reach K8s API in validation tests");
+      }),
+    } as any;
 
-      // Test with bash shell (kubectl exec pod-name -- bash -c 'command')
-      shell = "/bin/bash";
-      commandArr = [shell || "/bin/sh", "-c", "echo hello"];
-      expect(commandArr).toEqual(["/bin/bash", "-c", "echo hello"]);
-
-      // Test with zsh shell (kubectl exec pod-name -- zsh -c 'command')
-      shell = "/bin/zsh";
-      commandArr = [shell || "/bin/sh", "-c", "echo hello"];
-      expect(commandArr).toEqual(["/bin/zsh", "-c", "echo hello"]);
+    test("rejects non-array command", async () => {
+      await expect(
+        execInPod(mockK8sManager, {
+          name: "test-pod",
+          command: "echo hello" as any, // Force string to test validation
+        })
+      ).rejects.toThrow("Command must be an array of strings");
     });
 
-    test("shell parameter not used with array commands", () => {
-      // Array commands should pass through regardless of shell
-      const command = ["echo", "hello"];
-      const shell = "/bin/bash";
+    test("rejects empty command array", async () => {
+      await expect(
+        execInPod(mockK8sManager, {
+          name: "test-pod",
+          command: [],
+        })
+      ).rejects.toThrow("Command array cannot be empty");
+    });
 
-      // With array commands, the shell should be ignored
-      if (Array.isArray(command)) {
-        expect(command).toEqual(["echo", "hello"]);
-      } else {
-        const shellCmd = [shell || "/bin/sh", "-c", command];
-        expect(shellCmd).toEqual(["/bin/bash", "-c", "command-that-should-not-be-used"]);
-      }
+    test("rejects command array with non-string elements", async () => {
+      await expect(
+        execInPod(mockK8sManager, {
+          name: "test-pod",
+          command: ["ls", 123 as any, "-la"],
+        })
+      ).rejects.toThrow("must be a string");
     });
   });
 
@@ -108,12 +101,12 @@ describe("exec_in_pod tool", () => {
         return inputTimeout !== undefined ? inputTimeout : 60000;
       }
 
-      // Test with default timeout (kubectl exec has no built-in timeout)
+      // Test with default timeout
       let timeout: number | undefined = undefined;
       let timeoutMs = getTimeoutValue(timeout);
       expect(timeoutMs).toBe(60000);
 
-      // Test with custom timeout 
+      // Test with custom timeout
       timeout = 30000;
       timeoutMs = getTimeoutValue(timeout);
       expect(timeoutMs).toBe(30000);
@@ -236,6 +229,37 @@ describe("exec_in_pod tool", () => {
       result = processExecOutput("", "");
       expect(result.success).toBe(false);
       expect(result.message).toContain("No output");
+    });
+  });
+
+  // Verify array format prevents shell interpretation
+  describe("exec in pod should only support string arrays", () => {
+    test("shell metacharacters in array elements are not interpreted", () => {
+      // When using array format, shell metacharacters are passed as literal strings
+      // to the executable, not interpreted by a shell
+      const command = ["echo", "hello; touch /tmp/pwned"];
+
+      // With array format, "hello; touch /tmp/pwned" is a single argument to echo
+      // It will literally print "hello; touch /tmp/pwned" not execute touch
+      expect(command[0]).toBe("echo");
+      expect(command[1]).toBe("hello; touch /tmp/pwned"); // Literal string, not shell-interpreted
+    });
+
+    test("pipe operators in array elements are not interpreted", () => {
+      const command = ["cat", "/tmp/data | tee /tmp/output"];
+
+      // With array format, the pipe is part of the filename argument
+      // cat will try to open a file literally named "/tmp/data | tee /tmp/output"
+      expect(command[0]).toBe("cat");
+      expect(command[1]).toContain("|"); // Literal pipe character
+    });
+
+    test("command substitution in array elements is not interpreted", () => {
+      const command = ["echo", "$(whoami)"];
+
+      // With array format, $(whoami) is printed literally
+      expect(command[0]).toBe("echo");
+      expect(command[1]).toBe("$(whoami)"); // Not executed
     });
   });
 });

@@ -2,7 +2,7 @@
   "manifest_version": "0.1",
   "name": "mcp-server-kubernetes",
   "display_name": "Kubernetes MCP Server",
-  "version": "2.9.5",
+  "version": "2.9.7",
   "description": "MCP server for interacting with Kubernetes clusters via kubectl",
   "long_description": "MCP Server that can connect to a Kubernetes cluster and manage it.\n\nBy default, the server loads kubeconfig from `~/.kube/config`.\n\nThe server will automatically connect to your current kubectl context. Make sure you have:\n\n1. kubectl installed and in your PATH\n2. A valid kubeconfig file with contexts configured\n3. Access to a Kubernetes cluster configured for kubectl (e.g. minikube, Rancher Desktop, GKE, etc.)\n4. Optional: Helm v3 installed and in your PATH.\n\nYou can verify your connection by asking Claude to list your pods or create a test deployment.\n\nIf you have errors open up a standard terminal and run `kubectl get pods` to see if you can connect to your cluster without credentials issues.\n\n## Features\n\n- [x] Connect to a Kubernetes cluster\n- [x] Unified kubectl API for managing resources\n- Get or list resources with `kubectl_get`\n- Describe resources with `kubectl_describe`\n- List resources with `kubectl_get`\n- Create resources with `kubectl_create`\n- Apply YAML manifests with `kubectl_apply`\n- Delete resources with `kubectl_delete`\n- Get logs with `kubectl_logs`\n- and more.",
   "homepage": "https://github.com/Flux159/mcp-server-kubernetes",
@@ -11,13 +11,17 @@
     "name": "Flux159",
     "url": "https://github.com/Flux159/"
   },
-  "privacy_policies": ["https://www.linuxfoundation.org/legal/privacy-policy"],
+  "privacy_policies": [
+    "https://www.linuxfoundation.org/legal/privacy-policy"
+  ],
   "server": {
     "type": "node",
     "entry_point": "dist/index.js",
     "mcp_config": {
       "command": "node",
-      "args": ["${__dirname}/dist/index.js"]
+      "args": [
+        "${__dirname}/dist/index.js"
+      ]
     }
   },
   "tools": [
@@ -110,7 +114,12 @@
       "description": "Stop a port-forward process"
     }
   ],
-  "keywords": ["kubernetes", "docker", "containers", "containerization"],
+  "keywords": [
+    "kubernetes",
+    "docker",
+    "containers",
+    "containerization"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",

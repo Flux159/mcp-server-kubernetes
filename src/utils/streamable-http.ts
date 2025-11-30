@@ -29,7 +29,10 @@ export function startStreamableHTTPServer(server: Server): http.Server {
         });
       res.on("close", () => {
         transport.close();
-        server.close();
+        // Note: server.close() should NOT be called here as server is shared
+        // across all requests. Calling it would close the global MCP Server
+        // instance and cause the Node.js process to exit. Only the transport
+        // instance needs to be closed when the HTTP connection ends.
       });
       await server.connect(transport);
       await transport.handleRequest(req, res, req.body);

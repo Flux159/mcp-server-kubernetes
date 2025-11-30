@@ -2,7 +2,10 @@
  * Tool: exec_in_pod
  * Execute a command in a Kubernetes pod or container and return the output.
  * Uses the official Kubernetes client-node Exec API for native execution.
- * Supports both string and array command formats, and optional container targeting.
+ *
+ * SECURITY: Only accepts commands as an array of strings. This prevents command
+ * injection attacks by executing directly without shell interpretation.
+ * Shell operators (pipes, redirects, etc.) are intentionally not supported.
  */
 
 import * as k8s from "@kubernetes/client-node";
@@ -15,12 +18,12 @@ import { contextParameter, namespaceParameter } from "../models/common-parameter
  * Schema for exec_in_pod tool.
  * - name: Pod name
  * - namespace: Namespace (default: "default")
- * - command: Command to execute (string or array of args)
+ * - command: Command to execute as array of strings (e.g. ["ls", "-la"])
  * - container: (Optional) Container name
  */
 export const execInPodSchema = {
   name: "exec_in_pod",
-  description: "Execute a command in a Kubernetes pod or container and return the output",
+  description: "Execute a command in a Kubernetes pod or container and return the output. Command must be an array of strings where the first element is the executable and remaining elements are arguments. This executes directly without shell interpretation for security.",
   inputSchema: {
     type: "object",
     properties: {
@@ -30,19 +33,13 @@ export const execInPodSchema = {
       },
       namespace: namespaceParameter,
       command: {
-        anyOf: [
-          { type: "string" },
-          { type: "array", items: { type: "string" } }
-        ],
-        description: "Command to execute in the pod (string or array of args)",
+        type: "array",
+        items: { type: "string" },
+        description: "Command to execute as an array of strings (e.g. [\"ls\", \"-la\", \"/app\"]). First element is the executable, remaining are arguments. Shell operators like pipes, redirects, or command chaining are not supported - use explicit array format for security.",
       },
       container: {
         type: "string",
         description: "Container name (required when pod has multiple containers)",
-      },
-      shell: {
-        type: "string",
-        description: "Shell to use for command execution (e.g. '/bin/sh', '/bin/bash'). If not provided, will use command as-is.",
       },
       timeout: {
         type: "number",
@@ -58,30 +55,49 @@ export const execInPodSchema = {
  * Execute a command in a Kubernetes pod or container using the Kubernetes client-node Exec API.
  * Returns the stdout output as a text response.
  * Throws McpError on failure.
+ *
+ * SECURITY: Command must be an array of strings. This executes directly via the
+ * Kubernetes exec API without shell interpretation, preventing command injection.
  */
 export async function execInPod(
   k8sManager: KubernetesManager,
   input: {
     name: string;
     namespace?: string;
-    command: string | string[];
+    command: string[];
     container?: string;
-    shell?: string;
     timeout?: number;
     context?: string;
   }
 ): Promise<{ content: { type: string; text: string }[] }> {
   const namespace = input.namespace || "default";
-  // Convert command to array of strings for the Exec API
-  let commandArr: string[];
-  if (Array.isArray(input.command)) {
-    commandArr = input.command;
-  } else {
-    // Always wrap string commands in a shell for correct parsing
-    const shell = input.shell || "/bin/sh";
-    commandArr = [shell, "-c", input.command];
-    console.log("[exec_in_pod] Using shell:", shell, "Command array:", commandArr);
+
+  // Validate command is an array (defense in depth - schema should enforce this)
+  if (!Array.isArray(input.command)) {
+    throw new McpError(
+      ErrorCode.InvalidParams,
+      "Command must be an array of strings (e.g. [\"ls\", \"-la\"]). String commands are not supported for security reasons."
+    );
   }
+
+  if (input.command.length === 0) {
+    throw new McpError(
+      ErrorCode.InvalidParams,
+      "Command array cannot be empty"
+    );
+  }
+
+  // Validate all elements are strings
+  for (let i = 0; i < input.command.length; i++) {
+    if (typeof input.command[i] !== "string") {
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        `Command array element at index ${i} must be a string`
+      );
+    }
+  }
+
+  const commandArr = input.command;
 
   // Prepare buffers to capture stdout and stderr
   let stdout = "";
