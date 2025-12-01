@@ -115,7 +115,10 @@ jobs:
 
           # Package the chart and push it to GitHub Packages (ghcr.io).
           helm package ./helm-chart
-          helm push *.tgz oci://ghcr.io/${{ github.repository_owner }}
+
+          # OCI registries require lowercase names
+          REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          helm push *.tgz oci://ghcr.io/${REPO_OWNER}
 
       - name: Build dxt
         run: |
