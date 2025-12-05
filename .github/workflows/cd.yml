@@ -105,7 +105,9 @@ jobs:
         run: bun run build
 
       - name: Publish to NPM
-        run: npm publish
+        run: |
+          npm install -g npm@latest
+          npm publish
 
       - name: Update, Package and Push Helm chart to GHCR
         run: |
