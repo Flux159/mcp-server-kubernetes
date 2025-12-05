@@ -104,10 +104,17 @@ jobs:
       - name: Build For production
         run: bun run build
 
+      - name: Setup Node.js for NPM publish
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Update npm for OIDC support
+        run: npm install -g npm@latest
+
       - name: Publish to NPM
-        run: |
-          npm install -g npm@latest
-          npm publish
+        run: npm publish
 
       - name: Update, Package and Push Helm chart to GHCR
         run: |
