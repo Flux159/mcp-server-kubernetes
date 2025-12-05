@@ -5,6 +5,9 @@ on:
     tags:
       - v*
 
+permissions:
+  id-token: write
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -101,12 +104,7 @@ jobs:
         run: bun run build
 
       - name: Publish to NPM
-        run: |
-          echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > ~/.npmrc
-          echo "//registry.npmjs.org/:always-auth=true" >> ~/.npmrc
-          npm publish
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish
 
       - name: Update, Package and Push Helm chart to GHCR
         run: |

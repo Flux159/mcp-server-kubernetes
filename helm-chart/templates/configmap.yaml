@@ -23,7 +23,8 @@ data:
     
     export KUBECONFIG=/kubeconfig/kubeconfig
     touch $KUBECONFIG
-    
+    chmod 666 $KUBECONFIG
+
     # Function to retry commands
     retry_command() {
       local cmd="$1"
@@ -66,7 +67,8 @@ data:
     
     export KUBECONFIG=/kubeconfig/kubeconfig
     touch $KUBECONFIG
-    
+    chmod 666 $KUBECONFIG
+
     # Function to retry commands
     retry_command() {
       local cmd="$1"
@@ -144,7 +146,8 @@ data:
     # Download: {{ $config.name }}
     CURL_CMD="curl -sS{{- range $config.extraArgs }} {{ . | quote }}{{- end }} -o /kubeconfig/{{ $config.name }}.yaml {{ $config.url | quote }}"
     retry_command "$CURL_CMD" "Downloading kubeconfig {{ $config.name }}"
-    
+    chmod 666 /kubeconfig/{{ $config.name }}.yaml
+
     {{- if eq $index 0 }}
     KUBECONFIG_FILES="/kubeconfig/{{ $config.name }}.yaml"
     {{- else }}
