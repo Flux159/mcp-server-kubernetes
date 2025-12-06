@@ -114,7 +114,9 @@ jobs:
         run: npm install -g npm@latest
 
       - name: Publish to NPM
-        run: npm publish
+        env:
+          NPM_CONFIG_PROVENANCE: true
+        run: npm publish --provenance
 
       - name: Update, Package and Push Helm chart to GHCR
         run: |
