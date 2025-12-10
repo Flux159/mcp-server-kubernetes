@@ -5,7 +5,11 @@ import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
 import { getSpawnMaxBuffer } from "../config/max-buffer.js";
-import { contextParameter, dryRunParameter, namespaceParameter } from "../models/common-parameters.js";
+import {
+  contextParameter,
+  dryRunParameter,
+  namespaceParameter,
+} from "../models/common-parameters.js";
 
 export const kubectlPatchSchema = {
   name: "kubectl_patch",
@@ -93,6 +97,13 @@ export async function kubectlPatch(
 
     // Handle patch data
     if (input.patchData) {
+      if (input.patchData === null || typeof input.patchData !== "object") {
+        throw new McpError(
+          ErrorCode.InvalidRequest,
+          "patchData must be a valid JSON object, not a string."
+        );
+      }
+
       // Create a temporary file for the patch data
       const tmpDir = os.tmpdir();
       tempFile = path.join(tmpDir, `patch-${Date.now()}.json`);
