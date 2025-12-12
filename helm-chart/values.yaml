@@ -306,6 +306,10 @@ rbac:
 podAnnotations: {}
 podLabels: {}
 
+# Custom init containers configuration
+# These will run in addition to the kubeconfig-fetcher init container (if enabled)
+initContainers: []
+
 # Deployment configuration
 replicaCount: 1
 
