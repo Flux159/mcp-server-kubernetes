@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import dotenv from "dotenv";
+dotenv.config();
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
@@ -68,6 +70,7 @@ import {
 import { registerPromptHandlers } from "./prompts/index.js";
 import { ping, pingSchema } from "./tools/ping.js";
 import { startStreamableHTTPServer } from "./utils/streamable-http.js";
+
 
 // Check environment variables for tool filtering
 const allowOnlyReadonlyTools = process.env.ALLOW_ONLY_READONLY_TOOLS === "true";
@@ -330,12 +333,12 @@ server.setRequestHandler(
           k8sManager,
           input as {
             subCommand:
-              | "history"
-              | "pause"
-              | "restart"
-              | "resume"
-              | "status"
-              | "undo";
+            | "history"
+            | "pause"
+            | "restart"
+            | "resume"
+            | "status"
+            | "undo";
             resourceType: "deployment" | "daemonset" | "statefulset";
             name: string;
             namespace?: string;
@@ -524,7 +527,6 @@ server.setRequestHandler(
               namespace?: string;
               command: string[];
               container?: string;
-              timeout?: number;
               context?: string;
             }
           );
