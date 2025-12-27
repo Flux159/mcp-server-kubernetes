@@ -24,6 +24,9 @@ import { contextParameter, namespaceParameter } from "../models/common-parameter
 export const execInPodSchema = {
   name: "exec_in_pod",
   description: "Execute a command in a Kubernetes pod or container and return the output. Command must be an array of strings where the first element is the executable and remaining elements are arguments. This executes directly without shell interpretation for security.",
+  annotations: {
+    destructiveHint: true,
+  },
   inputSchema: {
     type: "object",
     properties: {

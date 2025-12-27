@@ -10,6 +10,9 @@ import { contextParameter, namespaceParameter, dryRunParameter } from "../models
 export const kubectlApplySchema = {
   name: "kubectl_apply",
   description: "Apply a Kubernetes YAML manifest from a string or file",
+  annotations: {
+    destructiveHint: true,
+  },
   inputSchema: {
     type: "object",
     properties: {
