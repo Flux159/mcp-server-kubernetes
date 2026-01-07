@@ -684,12 +684,13 @@ describe("kubernetes server operations", () => {
    * Tests creating a deployment with a custom configuration
    */
   test("custom deployment configuration", async () => {
-    const deploymentName = `test-deployment-${generateRandomSHA()}-${Date.now()}`;
     let attempts = 0;
     const maxAttempts = 3;
     const waitTime = 2000;
 
     while (attempts < maxAttempts) {
+      // Generate unique deployment name for each attempt to avoid "AlreadyExists" errors on retry
+      const deploymentName = `test-deployment-${generateRandomSHA()}-${Date.now()}`;
       try {
         // Create deployment using kubectl_create with manifest
         const deploymentManifest = {
