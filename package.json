@@ -38,11 +38,11 @@
   },
   "dependencies": {
     "@kubernetes/client-node": "1.3.0",
-    "@modelcontextprotocol/sdk": "1.17.0",
+    "@modelcontextprotocol/sdk": "1.25.2",
     "express": "4.21.2",
     "js-yaml": "4.1.1",
     "yaml": "2.7.0",
-    "zod": "3.23.8"
+    "zod": "3.25.76"
   },
   "devDependencies": {
     "@types/express": "5.0.1",
