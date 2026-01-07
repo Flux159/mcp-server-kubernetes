@@ -168,6 +168,7 @@ describe("KubernetesManager", () => {
       delete process.env.K8S_CONTEXT;
       delete process.env.K8S_NAMESPACE;
       delete process.env.K8S_SKIP_TLS_VERIFY;
+      delete process.env.K8S_CA_DATA;
     });
 
     describe("hasEnvKubeconfigYaml", () => {
@@ -397,6 +398,68 @@ current-context: test-context`;
             clusters: expect.arrayContaining([
               expect.objectContaining({
                 skipTLSVerify: false,
+              }),
+            ]),
+          })
+        );
+      });
+
+      test("should apply CA certificate data when K8S_CA_DATA is set", () => {
+        process.env.K8S_SERVER = "https://test-cluster.example.com";
+        process.env.K8S_TOKEN = "test-token-12345";
+        process.env.K8S_CA_DATA = "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0t";
+
+        kubernetesManager = new KubernetesManager();
+        const kubeConfig = kubernetesManager.getKubeConfig();
+
+        // Verify the loadFromOptions was called with caData
+        expect(kubeConfig.loadFromOptions).toHaveBeenCalledWith(
+          expect.objectContaining({
+            clusters: expect.arrayContaining([
+              expect.objectContaining({
+                caData: "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0t",
+              }),
+            ]),
+          })
+        );
+      });
+
+      test("should force skipTLSVerify to false when K8S_CA_DATA is set even if K8S_SKIP_TLS_VERIFY is true", () => {
+        process.env.K8S_SERVER = "https://test-cluster.example.com";
+        process.env.K8S_TOKEN = "test-token-12345";
+        process.env.K8S_CA_DATA = "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0t";
+        process.env.K8S_SKIP_TLS_VERIFY = "true";
+
+        kubernetesManager = new KubernetesManager();
+        const kubeConfig = kubernetesManager.getKubeConfig();
+
+        // Verify skipTLSVerify is forced to false when K8S_CA_DATA is provided
+        expect(kubeConfig.loadFromOptions).toHaveBeenCalledWith(
+          expect.objectContaining({
+            clusters: expect.arrayContaining([
+              expect.objectContaining({
+                caData: "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0t",
+                skipTLSVerify: false,
+              }),
+            ]),
+          })
+        );
+      });
+
+      test("should not include caData when K8S_CA_DATA is not set", () => {
+        process.env.K8S_SERVER = "https://test-cluster.example.com";
+        process.env.K8S_TOKEN = "test-token-12345";
+        // K8S_CA_DATA is intentionally not set
+
+        kubernetesManager = new KubernetesManager();
+        const kubeConfig = kubernetesManager.getKubeConfig();
+
+        // Verify the loadFromOptions was called with caData as undefined
+        expect(kubeConfig.loadFromOptions).toHaveBeenCalledWith(
+          expect.objectContaining({
+            clusters: expect.arrayContaining([
+              expect.objectContaining({
+                caData: undefined,
               }),
             ]),
           })

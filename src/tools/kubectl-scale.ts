@@ -7,6 +7,9 @@ import { contextParameter, namespaceParameter } from "../models/common-parameter
 export const kubectlScaleSchema = {
   name: "kubectl_scale",
   description: "Scale a Kubernetes deployment",
+  annotations: {
+    destructiveHint: true,
+  },
   inputSchema: {
     type: "object",
     properties: {

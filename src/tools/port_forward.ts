@@ -56,6 +56,9 @@ async function executeKubectlCommandAsync(
 export const PortForwardSchema = {
   name: "port_forward",
   description: "Forward a local port to a port on a Kubernetes resource",
+  annotations: {
+    title: "Port Forward",
+  },
   inputSchema: {
     type: "object",
     properties: {
@@ -118,6 +121,9 @@ export async function startPortForward(
 export const StopPortForwardSchema = {
   name: "stop_port_forward",
   description: "Stop a port-forward process",
+  annotations: {
+    title: "Stop Port Forward",
+  },
   inputSchema: {
     type: "object",
     properties: {

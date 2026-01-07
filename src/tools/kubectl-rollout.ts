@@ -8,6 +8,9 @@ export const kubectlRolloutSchema = {
   name: "kubectl_rollout",
   description:
     "Manage the rollout of a resource (e.g., deployment, daemonset, statefulset)",
+  annotations: {
+    destructiveHint: true,
+  },
   inputSchema: {
     type: "object",
     properties: {

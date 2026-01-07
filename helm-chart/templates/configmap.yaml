@@ -94,7 +94,7 @@ data:
     
     {{- range .Values.kubeconfig.gcp.clusters }}
     # Fetch cluster: {{ .name }}
-    GCP_CMD="gcloud container clusters get-credentials {{ .clusterName | quote }}{{- if .zone }} --zone={{ .zone | quote }}{{- else if .region }} --region={{ .region | quote }}{{- end }}{{- if .project }} --project={{ .project | quote }}{{- end }} --kubeconfig $KUBECONFIG{{- range .extraArgs }} {{ . | quote }}{{- end }}"
+    GCP_CMD="gcloud container clusters get-credentials {{ .clusterName | quote }}{{- if .zone }} --zone={{ .zone | quote }}{{- else if .region }} --region={{ .region | quote }}{{- end }}{{- if .project }} --project={{ .project | quote }}{{- end }} {{- range .extraArgs }} {{ . | quote }}{{- end }}"
     retry_command "$GCP_CMD" "Fetching GKE cluster {{ .name }}"
     {{- end }}
     

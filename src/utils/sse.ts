@@ -1,21 +1,25 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import express from "express";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+import { createAuthMiddleware, isAuthEnabled } from "./auth.js";
 
 export function startSSEServer(server: Server) {
   const app = express();
 
+  // Create auth middleware - when MCP_AUTH_TOKEN is set, requires X-MCP-AUTH header
+  const authMiddleware = createAuthMiddleware();
+
   // Currently just copying from docs & allowing for multiple transport connections: https://modelcontextprotocol.io/docs/concepts/transports#server-sent-events-sse
-  // TODO: If exposed to web, then this will enable any client to connect to the server via http - so marked as UNSAFE until mcp has a proper auth solution.
+  // Note: When MCP_AUTH_TOKEN is set, requests require X-MCP-AUTH header for authentication
   let transports: Array<SSEServerTransport> = [];
 
-  app.get("/sse", async (req, res) => {
+  app.get("/sse", authMiddleware, async (req, res) => {
     const transport = new SSEServerTransport("/messages", res);
     transports.push(transport);
     await server.connect(transport);
   });
 
-  app.post("/messages", (req, res) => {
+  app.post("/messages", authMiddleware, (req, res) => {
     const transport = transports.find(
       (t) => t.sessionId === req.query.sessionId
     );
@@ -63,7 +67,12 @@ export function startSSEServer(server: Server) {
   const host = process.env.HOST || "localhost";
   app.listen(port, host, () => {
     console.log(
-      `mcp-kubernetes-server is listening on port ${port}\nUse the following url to connect to the server:\n\http://${host}:${port}/sse`
+      `mcp-kubernetes-server is listening on port ${port}\nUse the following url to connect to the server:\nhttp://${host}:${port}/sse`
     );
+    if (isAuthEnabled()) {
+      console.log(
+        "Authentication enabled: X-MCP-AUTH header required for all MCP requests"
+      );
+    }
   });
 }

@@ -74,8 +74,13 @@ For simple server + token authentication:
 ```bash
 export K8S_SERVER='https://your-cluster.example.com'
 export K8S_TOKEN='eyJhbGciOiJSUzI1NiIsImtpZCI6...'
+export K8S_CA_DATA='LS0tLS1CRUdJTi...'  # optional, base64-encoded CA certificate
 export K8S_SKIP_TLS_VERIFY='false'  # optional, defaults to false
 ```
+
+The `K8S_CA_DATA` environment variable accepts a base64-encoded CA certificate (same format as `certificate-authority-data` in kubeconfig). This allows secure TLS verification without requiring a full kubeconfig file.
+
+**Note:** `K8S_CA_DATA` and `K8S_SKIP_TLS_VERIFY=true` are incompatible. When `K8S_CA_DATA` is provided, `K8S_SKIP_TLS_VERIFY` is automatically forced to `false`. Kubernetes throws an error when both TLS verification is skipped and CA data is provided.
 
 #### Custom Kubeconfig Path
 
@@ -102,6 +107,7 @@ These overrides work with any of the authentication methods above.
 # Option 1: Using minimal config with overrides
 export K8S_SERVER='https://prod-cluster.example.com'
 export K8S_TOKEN='eyJhbGciOiJSUzI1NiIsImtpZCI6...'
+export K8S_CA_DATA='LS0tLS1CRUdJTi...'  # base64-encoded CA certificate
 export K8S_CONTEXT='production'
 export K8S_NAMESPACE='my-app'
 export K8S_SKIP_TLS_VERIFY='false'
@@ -125,6 +131,7 @@ For Claude Desktop with environment variables:
       "env": {
         "K8S_SERVER": "https://prod-cluster.example.com",
         "K8S_TOKEN": "your-token-here",
+        "K8S_CA_DATA": "LS0tLS1CRUdJTi...",
         "K8S_CONTEXT": "production",
         "K8S_NAMESPACE": "my-app"
       }
@@ -352,6 +359,76 @@ mcp config
 ### Why is SSE Transport Unsafe?
 
 SSE transport exposes an http endpoint that can be accessed by anyone with the URL. This can be a security risk if the server is not properly secured. It is recommended to use a secure proxy server to proxy to the SSE endpoint. In addition, anyone with access to the URL will be able to utilize the authentication of your kubeconfig to make requests to your Kubernetes cluster. You should add logging to your proxy in order to monitor user requests to the SSE endpoint.
+
+### HTTP Transport Authentication (X-MCP-AUTH)
+
+For a quick and simple way to secure HTTP transports (both SSE and Streamable HTTP) without setting up a full proxy, you can use the built-in header-based authentication.
+
+When the `MCP_AUTH_TOKEN` environment variable is set, the server requires all MCP requests to include a matching `X-MCP-AUTH` header. Health and readiness endpoints (`/health`, `/ready`) remain unauthenticated for Kubernetes probes.
+
+#### Server Configuration
+
+```shell
+MCP_AUTH_TOKEN=my-secret-token ENABLE_UNSAFE_STREAMABLE_HTTP_TRANSPORT=1 npx mcp-server-kubernetes
+```
+
+Or with Docker:
+
+```shell
+docker run --rm -it -p 3001:3001 \
+  -e ENABLE_UNSAFE_STREAMABLE_HTTP_TRANSPORT=1 \
+  -e PORT=3001 \
+  -e MCP_AUTH_TOKEN=my-secret-token \
+  -v ~/.kube/config:/home/appuser/.kube/config \
+  flux159/mcp-server-kubernetes:latest
+```
+
+#### Client Configuration
+
+**Codex CLI (toml):**
+
+```toml
+[mcp_servers.k8s]
+transport = "streamable-http"
+url = "http://kubernetes-mcp.observe.svc.cluster.local:3001/mcp"
+env_http_headers = { "X-MCP-AUTH" = "X_MCP_AUTH" }
+```
+
+**Gemini CLI (json):**
+
+```json
+{
+  "mcpServers": {
+    "kubernetes": {
+      "type": "http",
+      "url": "http://kubernetes-mcp.observe.svc.cluster.local:3001/mcp",
+      "headers": {
+        "X-MCP-AUTH": "${X_MCP_AUTH}"
+      }
+    }
+  }
+}
+```
+
+**Testing with curl:**
+
+```shell
+# Without auth (will fail with 401)
+curl -X POST http://localhost:3001/mcp
+
+# With auth
+curl -X POST -H "X-MCP-AUTH: my-secret-token" -H "Content-Type: application/json" \
+  -d '{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"capabilities": {}}}' \
+  http://localhost:3001/mcp
+```
+
+#### Security Considerations
+
+This authentication method is intended as a simple way to add a layer of protection for in-cluster deployments where full OAuth would be overkill. For production internet-facing deployments, consider:
+
+- Using a proper reverse proxy with OAuth/OIDC
+- Deploying behind a service mesh with mTLS
+- Using Kubernetes NetworkPolicies to restrict access
 
 ## Advance Docker Usage
 

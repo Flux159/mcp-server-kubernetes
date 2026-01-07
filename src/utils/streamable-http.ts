@@ -2,12 +2,16 @@ import express from "express";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import http from "http";
+import { createAuthMiddleware, isAuthEnabled } from "./auth.js";
 
 export function startStreamableHTTPServer(server: Server): http.Server {
   const app = express();
   app.use(express.json());
 
-  app.post("/mcp", async (req: express.Request, res: express.Response) => {
+  // Create auth middleware - when MCP_AUTH_TOKEN is set, requires X-MCP-AUTH header
+  const authMiddleware = createAuthMiddleware();
+
+  app.post("/mcp", authMiddleware, async (req: express.Request, res: express.Response) => {
     // In stateless mode, create a new instance of transport and server for each request
     // to ensure complete isolation. A single instance would cause request ID collisions
     // when multiple clients connect concurrently.
@@ -52,7 +56,7 @@ export function startStreamableHTTPServer(server: Server): http.Server {
   });
 
   // SSE notifications not supported in stateless mode
-  app.get("/mcp", async (req: express.Request, res: express.Response) => {
+  app.get("/mcp", authMiddleware, async (req: express.Request, res: express.Response) => {
     console.log("Received GET MCP request");
     res.writeHead(405).end(
       JSON.stringify({
@@ -67,7 +71,7 @@ export function startStreamableHTTPServer(server: Server): http.Server {
   });
 
   // Session termination not needed in stateless mode
-  app.delete("/mcp", async (req: express.Request, res: express.Response) => {
+  app.delete("/mcp", authMiddleware, async (req: express.Request, res: express.Response) => {
     console.log("Received DELETE MCP request");
     res.writeHead(405).end(
       JSON.stringify({
@@ -117,6 +121,11 @@ export function startStreamableHTTPServer(server: Server): http.Server {
     console.log(
       `mcp-kubernetes-server is listening on port ${port}\nUse the following url to connect to the server:\nhttp://${host}:${port}/mcp`
     );
+    if (isAuthEnabled()) {
+      console.log(
+        "Authentication enabled: X-MCP-AUTH header required for all MCP requests"
+      );
+    }
   });
   return httpServer;
 }

@@ -34,6 +34,9 @@ export const installHelmChartSchema = {
   name: "install_helm_chart",
   description:
     "Install a Helm chart with support for both standard and template-based installation",
+  annotations: {
+    destructiveHint: true,
+  },
   inputSchema: {
     type: "object",
     properties: {
@@ -87,6 +90,9 @@ export const installHelmChartSchema = {
 export const upgradeHelmChartSchema = {
   name: "upgrade_helm_chart",
   description: "Upgrade an existing Helm chart release",
+  annotations: {
+    destructiveHint: true,
+  },
   inputSchema: {
     type: "object",
     properties: {
