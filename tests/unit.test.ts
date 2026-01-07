@@ -868,7 +868,7 @@ describe("kubernetes server operations", () => {
         await sleep(waitTime);
       }
     }
-  });
+  }, { timeout: 120000 });
 
   /**
    * Test case: Verify ping support
