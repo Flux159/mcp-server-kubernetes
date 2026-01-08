@@ -61,7 +61,7 @@ export const kubectlDeleteSchema = {
       },
       context: contextParameter,
     },
-    required: ["resourceType", "name", "namespace"],
+    required: [],
   },
 } as const;
 
