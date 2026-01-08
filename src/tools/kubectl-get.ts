@@ -56,7 +56,7 @@ export const kubectlGetSchema = {
       },
       context: contextParameter,
     },
-    required: ["resourceType", "name", "namespace"],
+    required: ["resourceType"],
   },
 } as const;
 
