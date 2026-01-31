@@ -139,7 +139,7 @@ mcp-server-kubernetes.mcpb
 
 .vscode/
 
-# Gas Town (added by gt)
+# added by gt
 .runtime/
 .claude/
 .beads/
