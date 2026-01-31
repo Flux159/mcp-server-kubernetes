@@ -277,3 +277,15 @@ successThreshold: {{ .Values.readinessProbe.successThreshold | default 1 }}
 {{- end }}
 {{- end }}
 {{- end }}
+
+{{/*
+Build resource attributes string for OpenTelemetry from map
+Format: key1=value1,key2=value2
+*/}}
+{{- define "mcp-server-kubernetes.resourceAttributes" -}}
+{{- $attrs := list -}}
+{{- range $key, $value := .Values.observability.resourceAttributes -}}
+{{- $attrs = append $attrs (printf "%s=%s" $key $value) -}}
+{{- end -}}
+{{- join "," $attrs -}}
+{{- end -}}

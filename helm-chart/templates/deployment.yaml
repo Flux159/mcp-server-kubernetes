@@ -139,7 +139,41 @@ spec:
                   name: {{ include "mcp-server-kubernetes.fullname" . }}-kubeconfig
                   key: kubeconfig.yaml
             {{- end }}
-            
+
+            # OpenTelemetry Observability Configuration
+            {{- if .Values.observability.enabled }}
+            - name: ENABLE_TELEMETRY
+              value: "true"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.observability.otlp.endpoint | quote }}
+            {{- if .Values.observability.otlp.protocol }}
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: {{ .Values.observability.otlp.protocol | quote }}
+            {{- end }}
+            - name: OTEL_TRACES_SAMPLER
+              value: {{ .Values.observability.sampling.type | quote }}
+            {{- if eq .Values.observability.sampling.type "traceidratio" }}
+            - name: OTEL_TRACES_SAMPLER_ARG
+              value: {{ .Values.observability.sampling.ratio | quote }}
+            {{- end }}
+            - name: OTEL_SERVICE_NAME
+              value: {{ .Values.observability.serviceName | quote }}
+            {{- if .Values.observability.resourceAttributes }}
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: {{ include "mcp-server-kubernetes.resourceAttributes" . | quote }}
+            {{- end }}
+            {{- if .Values.observability.tls.enabled }}
+            {{- if .Values.observability.tls.insecure }}
+            - name: OTEL_EXPORTER_OTLP_INSECURE
+              value: "true"
+            {{- end }}
+            {{- if .Values.observability.tls.caCert }}
+            - name: OTEL_EXPORTER_OTLP_CERTIFICATE
+              value: {{ .Values.observability.tls.caCert | quote }}
+            {{- end }}
+            {{- end }}
+            {{- end }}
+
             # Additional environment variables
             {{- range $key, $value := .Values.env }}
             - name: {{ $key }}

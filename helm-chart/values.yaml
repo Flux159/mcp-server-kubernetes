@@ -469,6 +469,53 @@ affinity: {}
 #           operator: In
 #           values: ["amd64", "arm64"]
 
+# OpenTelemetry Observability Configuration
+observability:
+  # Enable OpenTelemetry observability (disabled by default)
+  enabled: false
+
+  # OTLP exporter configuration
+  otlp:
+    # OTLP collector endpoint
+    # Format: http://host:port or https://host:port
+    # Common ports: 4317 (gRPC), 4318 (HTTP)
+    endpoint: "http://tempo-distributor.observability:4317"
+
+    # Protocol: grpc or http/protobuf
+    protocol: "grpc"
+
+  # Sampling configuration
+  sampling:
+    # Sampling type: always_on, always_off, traceidratio
+    type: "traceidratio"
+
+    # Sampling ratio (0.0-1.0) for traceidratio sampler
+    # 0.05 = 5% sampling (recommended for production)
+    # 0.10 = 10% sampling
+    # 1.00 = 100% sampling (development only)
+    ratio: 0.05
+
+  # Service identification
+  serviceName: "kubernetes-mcp-server"
+
+  # Custom resource attributes for filtering and analysis
+  # These will be added to all traces
+  resourceAttributes:
+    deployment.environment: "production"
+    # k8s.cluster.name: "prod-us-west-2"
+    # team: "platform"
+    # cost_center: "engineering"
+    # version: "0.1.0"
+
+  # TLS/mTLS configuration (optional)
+  tls:
+    # Enable TLS for OTLP endpoint
+    enabled: false
+    # Path to CA certificate (if custom CA)
+    # caCert: /path/to/ca.crt
+    # Insecure mode (skip TLS verification) - NOT recommended for production
+    insecure: false
+
 # Additional environment variables
 env: {}
 # Example:
