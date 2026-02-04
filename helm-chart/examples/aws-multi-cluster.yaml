@@ -37,6 +37,8 @@ kubeconfig:
   initContainer:
     maxRetries: 3
     retryDelay: 10
+    # Pin AWS CLI to a specific version for reproducibility
+    imageTag: "2.15.0"
     resources:
       limits:
         cpu: 250m

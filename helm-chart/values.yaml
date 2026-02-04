@@ -168,6 +168,12 @@ kubeconfig:
   initContainer:
     maxRetries: 3
     retryDelay: 10
+    # Image tag for the init container (defaults to "latest" if not set)
+    # Recommended to pin to a specific version for production
+    imageTag: ""
+    # Example:
+    # imageTag: "2.15.0"  # for AWS CLI
+    # imageTag: "slim"    # for GCP cloud-sdk
     resources:
       limits:
         cpu: 100m
