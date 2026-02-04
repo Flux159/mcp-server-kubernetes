@@ -51,6 +51,18 @@ transport:
 # AWS EKS multi-cluster configuration
 kubeconfig:
   provider: "aws"
+  initContainer:
+    # Pin AWS CLI to a specific version for reproducibility
+    imageTag: "2.15.0"
+    maxRetries: 3
+    retryDelay: 10
+    resources:
+      limits:
+        cpu: 250m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
   aws:
     clusters:
       # Production US-East cluster

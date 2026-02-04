@@ -89,9 +89,12 @@ Get the appropriate init container image based on provider with architecture sup
 {{- else }}
 {{- $baseImage = "alpine" }}
 {{- end }}
+{{- $tag := .Values.kubeconfig.initContainer.imageTag | default "" }}
 {{- if and .Values.image.architectures .Values.image.architecture }}
-{{- $archTag := index .Values.image.architectures .Values.image.architecture | default "latest" }}
-{{- printf "%s:%s" $baseImage $archTag }}
+{{- $tag = index .Values.image.architectures .Values.image.architecture | default $tag }}
+{{- end }}
+{{- if $tag }}
+{{- printf "%s:%s" $baseImage $tag }}
 {{- else }}
 {{- printf "%s:latest" $baseImage }}
 {{- end }}
