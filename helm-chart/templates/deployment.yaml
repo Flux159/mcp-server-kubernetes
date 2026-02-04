@@ -75,6 +75,10 @@ spec:
               mountPath: /kubeconfig
             - name: kubeconfig-scripts
               mountPath: /scripts
+            {{- if eq .Values.kubeconfig.provider "aws" }}
+            - name: aws-credentials
+              mountPath: /.aws
+            {{- end }}
           resources:
             {{- toYaml .Values.kubeconfig.initContainer.resources | nindent 12 }}
         {{- end }}
@@ -154,6 +158,10 @@ spec:
               {{- else if .Values.kubeconfig.volume.volumeMountSpec }}
             {{- list .Values.kubeconfig.volume.volumeMountSpec | toYaml | nindent 12 }}
               {{- end }}
+            {{- if eq .Values.kubeconfig.provider "aws" }}
+            - name: aws-credentials
+              mountPath: /home/node/.aws
+            {{- end }}
             {{- end }}
             {{- with .Values.volumeMounts }}
             {{- toYaml . | nindent 12 }}
@@ -185,6 +193,10 @@ spec:
           configMap:
             name: {{ include "mcp-server-kubernetes.fullname" . }}-scripts
             defaultMode: 0755
+        {{- if eq .Values.kubeconfig.provider "aws" }}
+        - name: aws-credentials
+          emptyDir: {}
+        {{- end }}
         {{- else if eq .Values.kubeconfig.provider "content" }}
         - name: kubeconfig-volume
           secret:
