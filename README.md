@@ -136,6 +136,21 @@ npx mcp-chat --config "%APPDATA%\Claude\claude_desktop_config.json"
 gemini extensions install https://github.com/Flux159/mcp-server-kubernetes
 ```
 
+### AdaL CLI
+
+[AdaL CLI](https://sylph.ai/) is a unified AI agent for software engineering with built-in [MCP support](https://docs.sylph.ai/features/mcp-support-proposed). Add the Kubernetes MCP server directly from the AdaL CLI prompt:
+
+```text
+# Run inside the AdaL CLI prompt:
+/mcp add kubernetes --command npx --args "-y,mcp-server-kubernetes"
+```
+
+For non-destructive mode:
+
+```text
+/mcp add kubernetes --command npx --args "-y,mcp-server-kubernetes" --env "ALLOW_ONLY_NON_DESTRUCTIVE_TOOLS=true"
+```
+
 ## Features
 
 - [x] Connect to a Kubernetes cluster
