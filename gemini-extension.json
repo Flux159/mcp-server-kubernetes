@@ -1,10 +1,12 @@
 {
-  "name":"mcp-server-kubernetes",
-  "version":"1.0.0",
+  "name": "mcp-server-kubernetes",
+  "version": "3.3.0",
   "mcpServers": {
     "kubernetes": {
       "command": "npx",
-      "args": ["mcp-server-kubernetes"]
+      "args": [
+        "mcp-server-kubernetes"
+      ]
     }
   }
 }
