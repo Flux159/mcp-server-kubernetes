@@ -207,7 +207,7 @@ export async function kubectlGet(
                 name: item.metadata?.name || "",
                 namespace: item.metadata?.namespace || "",
                 kind: item.kind || resourceType,
-                status: getResourceStatus(item),
+                status: getResourceStatus(item, resourceType),
                 createdAt: item.metadata?.creationTimestamp,
               }));
 
@@ -270,13 +270,101 @@ export async function kubectlGet(
   }
 }
 
+// Compute pod status the same way kubectl does, by inspecting container statuses
+// Based on kubernetes/pkg/printers/internalversion/printers.go printPod()
+function getPodStatus(pod: any): string {
+  let reason = pod.status?.phase || "Unknown";
+
+  if (pod.status?.reason) {
+    reason = pod.status.reason;
+  }
+
+  // Check init container statuses
+  const initContainerStatuses = pod.status?.initContainerStatuses || [];
+  for (let i = 0; i < initContainerStatuses.length; i++) {
+    const container = initContainerStatuses[i];
+    const terminated = container.state?.terminated;
+    const waiting = container.state?.waiting;
+
+    if (terminated && terminated.exitCode === 0) {
+      // Init container completed successfully, continue
+      continue;
+    }
+
+    if (terminated) {
+      if (terminated.reason) {
+        reason = `Init:${terminated.reason}`;
+      } else if (terminated.signal) {
+        reason = `Init:Signal:${terminated.signal}`;
+      } else {
+        reason = `Init:ExitCode:${terminated.exitCode}`;
+      }
+    } else if (waiting && waiting.reason && waiting.reason !== "PodInitializing") {
+      reason = `Init:${waiting.reason}`;
+    } else {
+      const totalInit = initContainerStatuses.length;
+      reason = `Init:${i}/${totalInit}`;
+    }
+    break;
+  }
+
+  // If all init containers are done, check regular container statuses
+  if (
+    initContainerStatuses.length === 0 ||
+    !reason.startsWith("Init:")
+  ) {
+    const containerStatuses = pod.status?.containerStatuses || [];
+    let hasRunning = false;
+
+    for (let i = containerStatuses.length - 1; i >= 0; i--) {
+      const container = containerStatuses[i];
+      const waiting = container.state?.waiting;
+      const terminated = container.state?.terminated;
+
+      if (waiting && waiting.reason) {
+        reason = waiting.reason;
+      } else if (terminated) {
+        if (terminated.reason) {
+          reason = terminated.reason;
+        } else if (terminated.signal) {
+          reason = `Signal:${terminated.signal}`;
+        } else {
+          reason = `ExitCode:${terminated.exitCode}`;
+        }
+      } else if (container.ready && container.state?.running) {
+        hasRunning = true;
+      }
+    }
+
+    // If all containers are ready and running, use the phase
+    if (hasRunning && reason === (pod.status?.phase || "Unknown")) {
+      reason = pod.status?.phase || "Running";
+    }
+  }
+
+  // Handle pod deletion
+  if (pod.metadata?.deletionTimestamp) {
+    reason = "Terminating";
+  }
+
+  return reason;
+}
+
 // Extract status from various resource types
-function getResourceStatus(resource: any): string {
+function getResourceStatus(resource: any, resourceType?: string): string {
   if (!resource) return "Unknown";
 
-  // Pod status
-  if (resource.status?.phase) {
-    return resource.status.phase;
+  const isPod =
+    resource.kind === "Pod" ||
+    resourceType === "pods" ||
+    resourceType === "pod" ||
+    resourceType === "po" ||
+    (resource.status?.phase !== undefined &&
+      resource.status?.containerStatuses !== undefined);
+
+  // Pod status - use kubectl-equivalent logic
+  if (isPod) {
+    return getPodStatus(resource);
   }
 
   // Deployment, ReplicaSet, StatefulSet status
