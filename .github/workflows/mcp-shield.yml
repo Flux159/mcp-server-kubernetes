@@ -1,0 +1,21 @@
+name: MCP Shield
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+      - run: npm run build
+      - uses: thuggeelya/mcp-shield-action@23b14aa85fca81748712a935bf4b38271870093c # v1
+        with:
+          server: 'node dist/index.js'
