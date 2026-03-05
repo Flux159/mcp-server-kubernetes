@@ -16,6 +16,6 @@ jobs:
           node-version: 20
       - run: npm install
       - run: npm run build
-      - uses: thuggeelya/mcp-shield-action@644c14893e14c6b79aee14a5335ac3f9b12b08a4 # v1
+      - uses: thuggeelya/mcp-shield-action@v1
         with:
           server: 'node dist/index.js'
