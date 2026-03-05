@@ -75,8 +75,13 @@ import { registerPromptHandlers } from "./prompts/index.js";
 import { ping, pingSchema } from "./tools/ping.js";
 import { startStreamableHTTPServer } from "./utils/streamable-http.js";
 import { withTelemetry } from "./middleware/telemetry-middleware.js";
+import {
+  kubectlCodeMode,
+  kubectlCodeModeSchema,
+} from "./tools/kubectl-code-mode.js";
 
 // Check environment variables for tool filtering
+const enableCodeMode = process.env.ENABLE_CODE_MODE === "true";
 const allowOnlyReadonlyTools = process.env.ALLOW_ONLY_READONLY_TOOLS === "true";
 const allowedToolsEnv = process.env.ALLOWED_TOOLS;
 const nonDestructiveTools =
@@ -191,6 +196,11 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
     );
   } else {
     tools = allTools;
+  }
+
+  // Append code-mode tools when enabled
+  if (enableCodeMode) {
+    tools = [...tools, kubectlCodeModeSchema];
   }
 
   return { tools };
@@ -382,6 +392,18 @@ server.setRequestHandler(
           output: (input as { output?: string }).output,
           context: (input as { context?: string }).context,
         });
+      }
+
+      // Code mode tools
+      if (name === "kubectl_code_mode" && enableCodeMode) {
+        return await kubectlCodeMode(
+          input as {
+            args: string;
+            language?: string;
+            code: string;
+            context?: string;
+          }
+        );
       }
 
       // Handle specific non-kubectl operations
