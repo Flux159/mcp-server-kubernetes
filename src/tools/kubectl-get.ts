@@ -11,7 +11,7 @@ import {
 export const kubectlGetSchema = {
   name: "kubectl_get",
   description:
-    "Get or list Kubernetes resources by resource type, name, and optionally namespace",
+    "Get or list Kubernetes resources by resource type, name, and optionally namespace. Use when the user needs to retrieve a specific resource by identifier.",
   annotations: {
     readOnlyHint: true,
   },

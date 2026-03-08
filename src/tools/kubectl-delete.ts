@@ -13,7 +13,7 @@ import {
 export const kubectlDeleteSchema = {
   name: "kubectl_delete",
   description:
-    "Delete Kubernetes resources by resource type, name, labels, or from a manifest file",
+    "Delete Kubernetes resources by resource type, name, labels, or from a manifest file. Use when the user wants to permanently remove a resource.",
   annotations: {
     destructiveHint: true,
   },

@@ -7,7 +7,7 @@ import { contextParameter, namespaceParameter } from "../models/common-parameter
 export const kubectlRolloutSchema = {
   name: "kubectl_rollout",
   description:
-    "Manage the rollout of a resource (e.g., deployment, daemonset, statefulset)",
+    "Manage the rollout of a resource (e.g., deployment, daemonset, statefulset). Use when the user wants to kubectl rollout.",
   annotations: {
     destructiveHint: true,
   },

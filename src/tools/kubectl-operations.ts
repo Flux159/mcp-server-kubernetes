@@ -8,7 +8,7 @@ import { contextParameter } from "../models/common-parameters.js";
 
 export const explainResourceSchema = {
   name: "explain_resource",
-  description: "Get documentation for a Kubernetes resource or field",
+  description: "Get documentation for a Kubernetes resource or field. Use when the user wants to explain resource.",
   annotations: {
     readOnlyHint: true,
   },
@@ -43,7 +43,7 @@ export const explainResourceSchema = {
 
 export const listApiResourcesSchema = {
   name: "list_api_resources",
-  description: "List the API resources available in the cluster",
+  description: "List the API resources available in the cluster. Use when the user wants to see all available items in a collection or directory. Unlike list_namespaces, this tool specifically handles list api resources.",
   annotations: {
     readOnlyHint: true,
   },

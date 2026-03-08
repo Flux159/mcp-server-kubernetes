@@ -14,7 +14,7 @@ import {
 export const kubectlPatchSchema = {
   name: "kubectl_patch",
   description:
-    "Update field(s) of a resource using strategic merge patch, JSON merge patch, or JSON patch",
+    "Update field(s) of a resource using strategic merge patch, JSON merge patch, or JSON patch. Use when the user wants to kubectl patch.",
   annotations: {
     destructiveHint: true,
   },

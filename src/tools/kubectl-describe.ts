@@ -10,7 +10,7 @@ import {
 export const kubectlDescribeSchema = {
   name: "kubectl_describe",
   description:
-    "Describe Kubernetes resources by resource type, name, and optionally namespace",
+    "Describe Kubernetes resources by resource type, name, and optionally namespace. Use when the user wants to kubectl describe.",
   annotations: {
     readOnlyHint: true,
   },

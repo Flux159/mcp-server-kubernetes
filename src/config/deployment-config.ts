@@ -5,7 +5,7 @@ import {
 
 export const createDeploymentSchema = {
   name: "create_deployment",
-  description: "Create a new Kubernetes deployment",
+  description: "Create a new Kubernetes deployment. Use when the user wants to create a new resource that does not yet exist. Unlike kubectl_create, this tool specifically handles create deployment.",
   inputSchema: {
     type: "object",
     properties: {

@@ -10,7 +10,7 @@ import {
 export const kubectlGenericSchema = {
   name: "kubectl_generic",
   description:
-    "Execute any kubectl command with the provided arguments and flags",
+    "Execute any kubectl command with the provided arguments and flags. Use when the user wants to kubectl generic.",
   annotations: {
     destructiveHint: true,
   },

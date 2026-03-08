@@ -55,7 +55,7 @@ async function executeKubectlCommandAsync(
 
 export const PortForwardSchema = {
   name: "port_forward",
-  description: "Forward a local port to a port on a Kubernetes resource",
+  description: "Forward a local port to a port on a Kubernetes resource. Use when the user wants to port forward. Unlike stop_port_forward, this tool specifically handles port forward.",
   annotations: {
     title: "Port Forward",
   },
@@ -120,7 +120,7 @@ export async function startPortForward(
 
 export const StopPortForwardSchema = {
   name: "stop_port_forward",
-  description: "Stop a port-forward process",
+  description: "Stop a port-forward process. Use when the user wants to stop port forward. Unlike port_forward, this tool specifically handles stop port forward.",
   annotations: {
     title: "Stop Port Forward",
   },

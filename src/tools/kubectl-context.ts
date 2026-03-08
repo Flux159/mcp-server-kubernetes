@@ -6,7 +6,7 @@ import { getSpawnMaxBuffer } from "../config/max-buffer.js";
 export const kubectlContextSchema = {
   name: "kubectl_context",
   description:
-    "Manage Kubernetes contexts - list, get, or set the current context",
+    "Manage Kubernetes contexts - list, get, or set the current context. Use when the user wants to kubectl context.",
   annotations: {
     readOnlyHint: true,
   },

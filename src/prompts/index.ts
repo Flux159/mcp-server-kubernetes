@@ -9,16 +9,16 @@ export function registerPromptHandlers(server: Server, k8sManager: KubernetesMan
       prompts: [
         {
           name: "k8s-diagnose",
-          description: "Diagnose Kubernetes Resources.",
+          description: "Diagnose Kubernetes Resources. Use when the user wants to k8s-diagnose. Use when the user wants to test-client.",
           arguments: [
             {
               name: "keyword",
-              description: "A keyword to search pod/node names.",
+              description: "A keyword to search pod/node names. Use when the user wants to keyword.",
               required: true,
             },
             {
               name: "namespace",
-              description: "Optional: Specify a namespace to narrow down the search.",
+              description: "Optional: Specify a namespace to narrow down the search. Use when the user wants to namespace.",
               required: false,
               default: "all"
             },

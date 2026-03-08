@@ -33,7 +33,7 @@ import {
 export const installHelmChartSchema = {
   name: "install_helm_chart",
   description:
-    "Install a Helm chart with support for both standard and template-based installation",
+    "Install a Helm chart with support for both standard and template-based installation. Use when the user wants to install helm chart. Unlike upgrade_helm_chart, uninstall_helm_chart, this tool specifically handles install helm chart.",
   annotations: {
     destructiveHint: true,
   },
@@ -89,7 +89,7 @@ export const installHelmChartSchema = {
  */
 export const upgradeHelmChartSchema = {
   name: "upgrade_helm_chart",
-  description: "Upgrade an existing Helm chart release",
+  description: "Upgrade an existing Helm chart release. Use when the user wants to upgrade helm chart. Unlike install_helm_chart, uninstall_helm_chart, this tool specifically handles upgrade helm chart.",
   annotations: {
     destructiveHint: true,
   },
@@ -130,7 +130,7 @@ export const upgradeHelmChartSchema = {
  */
 export const uninstallHelmChartSchema = {
   name: "uninstall_helm_chart",
-  description: "Uninstall a Helm chart release",
+  description: "Uninstall a Helm chart release. Use when the user wants to uninstall helm chart. Unlike install_helm_chart, upgrade_helm_chart, this tool specifically handles uninstall helm chart.",
   annotations: {
     destructiveHint: true,
   },

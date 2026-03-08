@@ -10,7 +10,7 @@ import {
 export const kubectlLogsSchema = {
   name: "kubectl_logs",
   description:
-    "Get logs from Kubernetes resources like pods, deployments, or jobs",
+    "Get logs from Kubernetes resources like pods, deployments, or jobs. Use when the user wants to review history or past activity.",
   annotations: {
     readOnlyHint: true,
   },

@@ -1,7 +1,7 @@
 export const pingSchema = {
   name: "ping",
   description:
-    "Verify that the counterpart is still responsive and the connection is alive.",
+    "Verify that the counterpart is still responsive and the connection is alive. Use when the user wants to ping.",
   inputSchema: {
     type: "object",
     properties: {},

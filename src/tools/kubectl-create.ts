@@ -10,7 +10,7 @@ import { contextParameter, namespaceParameter, dryRunParameter } from "../models
 export const kubectlCreateSchema = {
   name: "kubectl_create",
   description:
-    "Create Kubernetes resources using various methods (from file or using subcommands)",
+    "Create Kubernetes resources using various methods (from file or using subcommands). Use when the user wants to create a new resource that does not yet exist. Unlike create_deployment, this tool specifically handles kubectl create.",
   inputSchema: {
     type: "object",
     properties: {

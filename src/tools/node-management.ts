@@ -1,6 +1,6 @@
 /**
  * Tool: node_management
- * Manage Kubernetes nodes with cordon, drain, and uncordon operations.
+ * Manage Kubernetes nodes with cordon, drain, and uncordon operations. Use when the user wants to node management..
  * Provides safety features for node operations and implements proper error handling
  * and confirmation requirements for destructive operations.
  * Note: Use kubectl_get with resourceType="nodes" to list nodes.
