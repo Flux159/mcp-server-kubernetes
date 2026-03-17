@@ -22,6 +22,8 @@ https://github.com/user-attachments/assets/f25f8f4e-4d04-479b-9ae0-5dac452dd2ed
 
 <a href="https://glama.ai/mcp/servers/w71ieamqrt"><img width="380" height="200" src="https://glama.ai/mcp/servers/w71ieamqrt/badge" /></a>
 
+[![AgentRank](https://agentrank-ai.com/api/badge/tool/Flux159--mcp-server-kubernetes)](https://agentrank-ai.com/tool/Flux159--mcp-server-kubernetes/)
+
 ## Installation & Usage
 
 ### Prerequisites
