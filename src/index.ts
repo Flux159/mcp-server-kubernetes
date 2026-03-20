@@ -53,6 +53,10 @@ import {
   kubectlContext,
   kubectlContextSchema,
 } from "./tools/kubectl-context.js";
+import {
+  kubectlReconnect,
+  kubectlReconnectSchema,
+} from "./tools/kubectl-reconnect.js";
 import { kubectlGet, kubectlGetSchema } from "./tools/kubectl-get.js";
 import {
   kubectlDescribe,
@@ -88,6 +92,7 @@ const readonlyTools = [
   kubectlDescribeSchema,
   kubectlLogsSchema,
   kubectlContextSchema,
+  kubectlReconnectSchema,
   explainResourceSchema,
   listApiResourcesSchema,
   pingSchema,
@@ -121,6 +126,7 @@ const allTools = [
 
   // Kubernetes context management
   kubectlContextSchema,
+  kubectlReconnectSchema,
 
   // Special operations that aren't covered by simple kubectl commands
   explainResourceSchema,
@@ -218,6 +224,10 @@ server.setRequestHandler(
             context?: string;
           }
         );
+      }
+
+      if (name === "kubectl_reconnect") {
+        return await kubectlReconnect(k8sManager);
       }
 
       if (name === "kubectl_get") {
