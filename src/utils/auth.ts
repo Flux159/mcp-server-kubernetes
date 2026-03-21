@@ -1,4 +1,17 @@
+import { timingSafeEqual } from "crypto";
 import { Request, Response, NextFunction } from "express";
+
+/** Constant-time string comparison that prevents timing attacks (CWE-208). */
+function timingSafeCompare(a: string, b: string): boolean {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) {
+    // Compare against itself to keep constant time, then return false
+    timingSafeEqual(bufA, bufA);
+    return false;
+  }
+  return timingSafeEqual(bufA, bufB);
+}
 
 /**
  * Authentication middleware for MCP HTTP transports.
@@ -37,7 +50,7 @@ export function createAuthMiddleware() {
       return;
     }
 
-    if (providedToken !== authToken) {
+    if (!timingSafeCompare(String(providedToken), authToken)) {
       res.status(403).json({
         jsonrpc: "2.0",
         error: {
