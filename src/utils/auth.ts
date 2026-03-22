@@ -50,7 +50,20 @@ export function createAuthMiddleware() {
       return;
     }
 
-    if (!timingSafeCompare(String(providedToken), authToken)) {
+    // Reject array-valued headers (e.g. duplicate X-MCP-AUTH)
+    if (Array.isArray(providedToken)) {
+      res.status(401).json({
+        jsonrpc: "2.0",
+        error: {
+          code: -32001,
+          message: "Unauthorized: Only single X-MCP-AUTH header is allowed",
+        },
+        id: null,
+      });
+      return;
+    }
+
+    if (!timingSafeCompare(providedToken, authToken)) {
       res.status(403).json({
         jsonrpc: "2.0",
         error: {
