@@ -6,7 +6,7 @@ export const kubectlReconnectSchema = {
   description:
     "Reconnect to the Kubernetes API server by recreating all API clients. Use this after cluster upgrades (e.g., EKS control plane upgrades that rotate ENIs/IPs) to force fresh DNS resolution and new TCP connections.",
   annotations: {
-    readOnlyHint: true,
+    readOnlyHint: false,
   },
   inputSchema: {
     type: "object",
