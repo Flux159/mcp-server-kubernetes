@@ -1,4 +1,17 @@
+import { timingSafeEqual } from "crypto";
 import { Request, Response, NextFunction } from "express";
+
+/** Constant-time string comparison that prevents timing attacks (CWE-208). */
+function timingSafeCompare(a: string, b: string): boolean {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) {
+    // Compare against itself to keep constant time, then return false
+    timingSafeEqual(bufA, bufA);
+    return false;
+  }
+  return timingSafeEqual(bufA, bufB);
+}
 
 /**
  * Authentication middleware for MCP HTTP transports.
@@ -37,7 +50,20 @@ export function createAuthMiddleware() {
       return;
     }
 
-    if (providedToken !== authToken) {
+    // Reject array-valued headers (e.g. duplicate X-MCP-AUTH)
+    if (Array.isArray(providedToken)) {
+      res.status(401).json({
+        jsonrpc: "2.0",
+        error: {
+          code: -32001,
+          message: "Unauthorized: Only single X-MCP-AUTH header is allowed",
+        },
+        id: null,
+      });
+      return;
+    }
+
+    if (!timingSafeCompare(providedToken, authToken)) {
       res.status(403).json({
         jsonrpc: "2.0",
         error: {
