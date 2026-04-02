@@ -3,12 +3,11 @@ import { z } from "zod";
 import { KubernetesManager } from "../utils/kubernetes-manager.js";
 
 // Use spawn instead of exec because port-forward is a long-running process
-async function executeKubectlCommandAsync(
-  command: string
+async function executeKubectlPortForward(
+  args: string[]
 ): Promise<{ success: boolean; message: string; pid: number }> {
   return new Promise((resolve, reject) => {
-    const [cmd, ...args] = command.split(" ");
-    const process = spawn(cmd, args);
+    const process = spawn("kubectl", args);
 
     let output = "";
     let errorOutput = "";
@@ -82,14 +81,21 @@ export async function startPortForward(
     namespace?: string;
   }
 ): Promise<{ content: { success: boolean; message: string }[] }> {
-  let command = `kubectl port-forward`;
+  // Build argument array directly to prevent argument injection via
+  // string concatenation + split. Each user-controlled value is a
+  // single element in the array, so spaces in input cannot create
+  // additional arguments.
+  const args: string[] = ["port-forward"];
   if (input.namespace) {
-    command += ` -n ${input.namespace}`;
+    args.push("-n", input.namespace);
   }
-  command += ` ${input.resourceType}/${input.resourceName} ${input.localPort}:${input.targetPort}`;
+  args.push(
+    `${input.resourceType}/${input.resourceName}`,
+    `${input.localPort}:${input.targetPort}`
+  );
 
   try {
-    const result = await executeKubectlCommandAsync(command);
+    const result = await executeKubectlPortForward(args);
     // Track the port-forward process
     k8sManager.trackPortForward({
       id: `${input.resourceType}-${input.resourceName}-${input.localPort}`,
