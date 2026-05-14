@@ -277,23 +277,58 @@ When enabled (default), `kubectl get secrets` and `kubectl get secret` commands 
 
 ### Streamable HTTP Transport
 
-To enable [Streamable HTTP transport](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports#streamable-http) for mcp-server-kubernetes, use the ENABLE_UNSAFE_STREAMABLE_HTTP_TRANSPORT environment variable.
+To enable [Streamable HTTP transport](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports#streamable-http) for mcp-server-kubernetes, use the `ENABLE_UNSAFE_STREAMABLE_HTTP_TRANSPORT` environment variable.
 
 ```shell
 ENABLE_UNSAFE_STREAMABLE_HTTP_TRANSPORT=1 npx flux159/mcp-server-kubernetes
 ```
 
-This will start an http server with the `/mcp` endpoint for streamable http events (POST, GET, and DELETE). Use the `PORT` env var to configure the server port. Use the `HOST` env var to configure listening on interfaces other than localhost.
+This starts an http server with the `/mcp` endpoint for streamable http events (POST, GET, and DELETE). Use the `PORT` env var to configure the server port (default `3000`). Use the `HOST` env var to configure listening on interfaces other than `localhost`.
 
 ```shell
 ENABLE_UNSAFE_STREAMABLE_HTTP_TRANSPORT=1 PORT=3001 HOST=0.0.0.0 npx flux159/mcp-server-kubernetes
 ```
 
-To enable DNS Rebinding protection if running locally, you should use `DNS_REBINDING_PROTECTION` and optionally `DNS_REBINDING_ALLOWED_HOST` (defaults to 127.0.0.1):
+#### DNS rebinding protection
 
+DNS rebinding protection is **enabled by default** to prevent malicious web pages from issuing requests to your local MCP server through the browser. The default allowlist accepts the `Host` header values commonly sent by local clients, so the out-of-the-box configuration "just works" for local usage:
+
+- `127.0.0.1`, `127.0.0.1:<PORT>`
+- `localhost`, `localhost:<PORT>`
+- `::1`, `[::1]:<PORT>`
+- The configured `HOST` value (and `HOST:PORT`) when it differs from the above
+
+Local usage requires no extra flags:
+
+```shell
+ENABLE_UNSAFE_STREAMABLE_HTTP_TRANSPORT=1 npx flux159/mcp-server-kubernetes
+# Client connects to http://localhost:3000/mcp – works with the default allowlist
 ```
-DNS_REBINDING_ALLOWED_HOST=true ENABLE_UNSAFE_STREAMABLE_HTTP_TRANSPORT=1 PORT=3001 HOST=0.0.0.0 npx flux159/mcp-server-kubernetes
+
+##### Hosting the server on a remote host or custom domain
+
+When the MCP server is reachable through a hostname that isn't in the default allowlist (for example a server you host at `mcp.example.com`, or any reverse-proxy domain), you must add that hostname so the SDK accepts requests with that `Host` header. Use `DNS_REBINDING_ALLOWED_HOST` to override the allowlist:
+
+```shell
+DNS_REBINDING_ALLOWED_HOST=mcp.example.com ENABLE_UNSAFE_STREAMABLE_HTTP_TRANSPORT=1 PORT=3001 HOST=0.0.0.0 npx flux159/mcp-server-kubernetes
 ```
+
+Notes:
+
+- `DNS_REBINDING_ALLOWED_HOST` accepts a single hostname today; if your deployment is reached through multiple hostnames, terminate them at a single canonical host (typically your reverse proxy) and pass that value here.
+- Include the port in the value (e.g. `mcp.example.com:3001`) only if clients send it in the `Host` header. Most browsers/clients omit the port for `:80` / `:443`.
+- When fronting the server with a reverse proxy (nginx, Caddy, an ingress, etc.), set `DNS_REBINDING_ALLOWED_HOST` to the **public** hostname clients use, not the upstream container name.
+- For production deployments you should additionally enable header authentication via `MCP_AUTH_TOKEN` (see [HTTP Transport Authentication](#http-transport-authentication-x-mcp-auth) below) and terminate TLS at your proxy.
+
+##### Disabling DNS rebinding protection (not recommended)
+
+If you have an environment where you cannot configure an allowlist (e.g. dynamic hostnames behind your own access-controlled proxy that already validates `Host`), you can disable the check explicitly:
+
+```shell
+DNS_REBINDING_PROTECTION=false ENABLE_UNSAFE_STREAMABLE_HTTP_TRANSPORT=1 PORT=3001 HOST=0.0.0.0 npx flux159/mcp-server-kubernetes
+```
+
+The server prints a startup warning when protection is disabled while binding to `0.0.0.0` or `::`, since that combination is the most common foot-gun.
 
 ### SSE Transport (Deprecated in favor of Streamable HTTP)
 

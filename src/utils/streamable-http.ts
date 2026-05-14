@@ -4,6 +4,26 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import http from "http";
 import { createAuthMiddleware, isAuthEnabled } from "./auth.js";
 
+/**
+ * Build the default allowedHosts list for DNS rebinding protection.
+ * Includes localhost variants with and without port.
+ */
+function buildDefaultAllowedHosts(host: string, port: number): string[] {
+  // Always allow the bare host and host:port for common localhost addresses
+  const localhostAliases = ["127.0.0.1", "localhost", "::1"];
+  const hosts: string[] = [];
+  for (const alias of localhostAliases) {
+    hosts.push(alias);
+    hosts.push(`${alias}:${port}`);
+  }
+  // Also add the configured host if it's not already covered
+  if (!localhostAliases.includes(host)) {
+    hosts.push(host);
+    hosts.push(`${host}:${port}`);
+  }
+  return hosts;
+}
+
 export function startStreamableHTTPServer(server: Server): http.Server {
   const app = express();
   app.use(express.json());
@@ -11,20 +31,41 @@ export function startStreamableHTTPServer(server: Server): http.Server {
   // Create auth middleware - when MCP_AUTH_TOKEN is set, requires X-MCP-AUTH header
   const authMiddleware = createAuthMiddleware();
 
+  // DNS rebinding protection is enabled by default. Set DNS_REBINDING_PROTECTION=false to disable.
+  const enableDnsRebindingProtection =
+    process.env.DNS_REBINDING_PROTECTION !== "false";
+
+  const host = process.env.HOST || "localhost";
+
+  let port = 3000;
+  try {
+    port = parseInt(process.env.PORT || "3000", 10);
+  } catch (e) {
+    console.error(
+      "Invalid PORT environment variable, using default port 3000."
+    );
+  }
+
+  const allowedHosts = process.env.DNS_REBINDING_ALLOWED_HOST
+    ? [process.env.DNS_REBINDING_ALLOWED_HOST]
+    : buildDefaultAllowedHosts(host, port);
+
+  // Warn when binding to all interfaces with DNS rebinding protection disabled
+  if (!enableDnsRebindingProtection && (host === "0.0.0.0" || host === "::")) {
+    console.warn(
+      "WARNING: DNS rebinding protection is disabled while HOST is set to " +
+        `'${host}'. This exposes the MCP server to DNS rebinding attacks ` +
+        "from any browser on the network. Set DNS_REBINDING_PROTECTION=true " +
+        "(the default) or restrict HOST to 'localhost' / '127.0.0.1'."
+    );
+  }
+
   app.post("/mcp", authMiddleware, async (req: express.Request, res: express.Response) => {
     // In stateless mode, create a new instance of transport and server for each request
     // to ensure complete isolation. A single instance would cause request ID collisions
     // when multiple clients connect concurrently.
 
     try {
-      // DNS rebinding protection is disabled by default for backwards compatibility. If you are running this server
-      // locally, make sure to set DNS_REBINDING_PROTECTION=true
-      const enableDnsRebindingProtection =
-        process.env.DNS_REBINDING_PROTECTION === "true";
-      const allowedHosts = process.env.DNS_REBINDING_ALLOWED_HOST
-        ? [process.env.DNS_REBINDING_ALLOWED_HOST]
-        : ["127.0.0.1"];
-
       const transport: StreamableHTTPServerTransport =
         new StreamableHTTPServerTransport({
           sessionIdGenerator: undefined,
@@ -107,16 +148,6 @@ export function startStreamableHTTPServer(server: Server): http.Server {
     }
   });
 
-  let port = 3000;
-  try {
-    port = parseInt(process.env.PORT || "3000", 10);
-  } catch (e) {
-    console.error(
-      "Invalid PORT environment variable, using default port 3000."
-    );
-  }
-
-  const host = process.env.HOST || "localhost";
   const httpServer = app.listen(port, host, () => {
     console.log(
       `mcp-kubernetes-server is listening on port ${port}\nUse the following url to connect to the server:\nhttp://${host}:${port}/mcp`
