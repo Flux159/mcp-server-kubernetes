@@ -41,6 +41,14 @@ const files = [
   {
     path: 'README.md',
     update: (content) => content.replace(/version = \{\{\{VERSION\}\}\}/g, `version = {${version}}`)
+  },
+  {
+    path: 'gemini-extension.json',
+    update: (content) => {
+      const ext = JSON.parse(content);
+      ext.version = version;
+      return JSON.stringify(ext, null, 2) + '\n';
+    }
   }
 ];
 

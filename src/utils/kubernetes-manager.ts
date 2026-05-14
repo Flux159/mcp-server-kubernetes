@@ -231,6 +231,12 @@ export class KubernetesManager {
    *
    * @param contextName
    */
+  public refreshApiClients(): void {
+    this.k8sApi = this.kc.makeApiClient(k8s.CoreV1Api);
+    this.k8sAppsApi = this.kc.makeApiClient(k8s.AppsV1Api);
+    this.k8sBatchApi = this.kc.makeApiClient(k8s.BatchV1Api);
+  }
+
   public setCurrentContext(contextName: string) {
     // Get all available contexts
     const contexts = this.kc.getContexts();

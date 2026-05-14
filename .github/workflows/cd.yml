@@ -92,7 +92,7 @@ jobs:
           # Update the version in all files using the npm script
           npm run version:update ${{ steps.version.outputs.current-version }}
 
-          git add package.json manifest.json CITATION.cff README.md
+          git add package.json manifest.json CITATION.cff README.md gemini-extension.json
           git commit -m "Bump version to ${{ steps.version.outputs.current-version }}"
 
           # Create and push the tag
@@ -134,11 +134,15 @@ jobs:
       - name: Build dxt
         run: |
           bun run buildmcpb
+          # Create a standard zip archive for Gemini CLI and other tools
+          git archive --format=zip -o mcp-server-kubernetes.zip HEAD
 
-      - name: Upload Release Asset
+      - name: Upload Release Assets
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload v${{ steps.version.outputs.current-version }} mcp-server-kubernetes.mcpb --clobber
+        run: |
+          gh release upload v${{ steps.version.outputs.current-version }} mcp-server-kubernetes.mcpb --clobber
+          gh release upload v${{ steps.version.outputs.current-version }} mcp-server-kubernetes.zip --clobber
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3

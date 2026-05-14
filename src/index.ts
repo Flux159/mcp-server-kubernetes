@@ -1,4 +1,10 @@
 #!/usr/bin/env node
+
+// Initialize OpenTelemetry before any other imports
+// This must be done first to ensure proper instrumentation
+import { initializeTelemetry, getTelemetryConfigSummary } from "./config/telemetry-config.js";
+const telemetrySdk = initializeTelemetry();
+
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
@@ -47,6 +53,10 @@ import {
   kubectlContext,
   kubectlContextSchema,
 } from "./tools/kubectl-context.js";
+import {
+  kubectlReconnect,
+  kubectlReconnectSchema,
+} from "./tools/kubectl-reconnect.js";
 import { kubectlGet, kubectlGetSchema } from "./tools/kubectl-get.js";
 import {
   kubectlDescribe,
@@ -68,6 +78,7 @@ import {
 import { registerPromptHandlers } from "./prompts/index.js";
 import { ping, pingSchema } from "./tools/ping.js";
 import { startStreamableHTTPServer } from "./utils/streamable-http.js";
+import { withTelemetry } from "./middleware/telemetry-middleware.js";
 
 // Check environment variables for tool filtering
 const allowOnlyReadonlyTools = process.env.ALLOW_ONLY_READONLY_TOOLS === "true";
@@ -81,6 +92,7 @@ const readonlyTools = [
   kubectlDescribeSchema,
   kubectlLogsSchema,
   kubectlContextSchema,
+  kubectlReconnectSchema,
   explainResourceSchema,
   listApiResourcesSchema,
   pingSchema,
@@ -114,6 +126,7 @@ const allTools = [
 
   // Kubernetes context management
   kubectlContextSchema,
+  kubectlReconnectSchema,
 
   // Special operations that aren't covered by simple kubectl commands
   explainResourceSchema,
@@ -191,7 +204,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 
 server.setRequestHandler(
   CallToolRequestSchema,
-  async (request: {
+  withTelemetry(async (request: {
     params: { name: string; _meta?: any; arguments?: Record<string, any> };
     method: string;
   }) => {
@@ -211,6 +224,10 @@ server.setRequestHandler(
             context?: string;
           }
         );
+      }
+
+      if (name === "kubectl_reconnect") {
+        return await kubectlReconnect(k8sManager);
       }
 
       if (name === "kubectl_get") {
@@ -540,7 +557,7 @@ server.setRequestHandler(
         `Tool execution failed: ${error}`
       );
     }
-  }
+  })
 );
 
 // Start the server
@@ -556,6 +573,7 @@ if (process.env.ENABLE_UNSAFE_SSE_TRANSPORT) {
   console.error(
     `Starting Kubernetes MCP server v${serverConfig.version}, handling commands...`
   );
+  console.error(getTelemetryConfigSummary());
 
   server.connect(transport);
 }

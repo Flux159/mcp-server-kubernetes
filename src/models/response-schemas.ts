@@ -83,12 +83,7 @@ export const GetJobLogsResponseSchema = z.object({
 });
 
 export const PortForwardResponseSchema = z.object({
-  content: z.array(
-    z.object({
-      success: z.boolean(),
-      message: z.string(),
-    })
-  ),
+  content: z.array(ToolResponseContent),
 });
 
 export const ScaleDeploymentResponseSchema = z.object({

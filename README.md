@@ -171,6 +171,73 @@ gemini extensions install https://github.com/Flux159/mcp-server-kubernetes
   - Guides through a systematic Kubernetes troubleshooting flow for pods based on a keyword and optional namespace.
 - [x] Non-destructive mode for read and create/update-only access to clusters
 - [x] Secrets masking for security (masks sensitive data in `kubectl get secrets` commands, does not affect logs)
+- [x] **OpenTelemetry Observability** (opt-in)
+  - Distributed tracing for all tool calls
+  - Export to Jaeger, Tempo, Grafana, or any OTLP backend
+  - Configurable sampling strategies
+  - Rich span attributes (tool name, duration, K8s context, errors)
+  - See [docs/OBSERVABILITY.md](docs/OBSERVABILITY.md) for details
+
+## Observability
+
+The MCP Kubernetes server includes optional **OpenTelemetry integration** for comprehensive observability. This feature is disabled by default and can be enabled via environment variables or Helm configuration.
+
+### Quick Start
+
+Enable observability with environment variables:
+
+```bash
+export ENABLE_TELEMETRY=true
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
+
+npx mcp-server-kubernetes
+```
+
+### What Gets Traced
+
+- **All tool calls**: kubectl_get, kubectl_apply, kubectl_logs, etc.
+- **Execution duration**: How long each operation takes
+- **Success/failure status**: Automatic error tracking
+- **Kubernetes context**: Namespace, context, resource type
+- **Rich metadata**: Host, process, and custom attributes
+
+### Backends Supported
+
+Works with any OTLP-compatible backend:
+- **Jaeger** (open source)
+- **Grafana Tempo** (open source)
+- **Grafana Cloud** (commercial)
+- **Datadog**, **New Relic**, **Honeycomb**, **Lightstep**, **AWS X-Ray**
+
+### Configuration
+
+See **[docs/OBSERVABILITY.md](docs/OBSERVABILITY.md)** for comprehensive documentation including:
+- Configuration options
+- Deployment examples (Kubernetes, Helm, Claude Code)
+- Sampling strategies
+- Production best practices
+- Troubleshooting guide
+
+### Example with Jaeger
+
+```bash
+# Start Jaeger
+docker run -d --name jaeger \
+  -e COLLECTOR_OTLP_ENABLED=true \
+  -p 16686:16686 \
+  -p 4317:4317 \
+  jaegertracing/all-in-one:latest
+
+# Enable telemetry
+export ENABLE_TELEMETRY=true
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
+export OTEL_TRACES_SAMPLER=always_on
+
+# Run server
+npx mcp-server-kubernetes
+
+# View traces: http://localhost:16686
+```
 
 ## Prompts
 
