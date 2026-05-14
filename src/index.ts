@@ -86,6 +86,23 @@ const allowedToolsEnv = process.env.ALLOWED_TOOLS;
 const nonDestructiveTools =
   process.env.ALLOW_ONLY_NON_DESTRUCTIVE_TOOLS === "true";
 
+const explicitlyAllowedToolNames = allowedToolsEnv
+  ? new Set(allowedToolsEnv.split(",").map((t) => t.trim()).filter(Boolean))
+  : null;
+
+const isToolAllowed = (name: string): boolean => {
+  if (explicitlyAllowedToolNames) {
+    return explicitlyAllowedToolNames.has(name);
+  }
+  if (allowOnlyReadonlyTools) {
+    return readonlyTools.some((t) => t.name === name);
+  }
+  if (nonDestructiveTools) {
+    return !destructiveTools.some((dt) => dt.name === name);
+  }
+  return true;
+};
+
 // Define readonly tools
 const readonlyTools = [
   kubectlGetSchema,
@@ -184,21 +201,8 @@ registerPromptHandlers(server, k8sManager);
 
 // Tools handlers
 server.setRequestHandler(ListToolsRequestSchema, async () => {
-  let tools;
-
-  if (allowedToolsEnv) {
-    const allowedToolNames = allowedToolsEnv.split(",").map((t) => t.trim());
-    tools = allTools.filter((tool) => allowedToolNames.includes(tool.name));
-  } else if (allowOnlyReadonlyTools) {
-    tools = readonlyTools;
-  } else if (nonDestructiveTools) {
-    tools = allTools.filter(
-      (tool) => !destructiveTools.some((dt) => dt.name === tool.name)
-    );
-  } else {
-    tools = allTools;
-  }
-
+  const baseTools = allowOnlyReadonlyTools ? readonlyTools : allTools;
+  const tools = baseTools.filter((tool) => isToolAllowed(tool.name));
   return { tools };
 });
 
@@ -210,6 +214,13 @@ server.setRequestHandler(
   }) => {
     try {
       const { name, arguments: input = {} } = request.params;
+
+      if (!isToolAllowed(name)) {
+        throw new McpError(
+          ErrorCode.InvalidRequest,
+          `Tool '${name}' is not allowed under the current server configuration`
+        );
+      }
 
       // Handle new kubectl-style commands
       if (name === "kubectl_context") {
