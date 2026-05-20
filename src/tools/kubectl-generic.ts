@@ -6,6 +6,7 @@ import {
   contextParameter,
   namespaceParameter,
 } from "../models/common-parameters.js";
+import { assertNoDangerousFlags } from "../security/kubectl-flags.js";
 
 export const kubectlGenericSchema = {
   name: "kubectl_generic",
@@ -71,6 +72,10 @@ export async function kubectlGeneric(
   }
 ) {
   try {
+    // Reject credential/target-redirecting flags before constructing the
+    // command. See src/security/kubectl-flags.ts for the rationale.
+    assertNoDangerousFlags(input.flags, input.args);
+
     // Start building the kubectl command
     const command = "kubectl";
     const cmdArgs: string[] = [input.command];
