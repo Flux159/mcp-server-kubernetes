@@ -14,12 +14,23 @@ function buildDefaultAllowedHosts(host: string, port: number): string[] {
   const hosts: string[] = [];
   for (const alias of localhostAliases) {
     hosts.push(alias);
-    hosts.push(`${alias}:${port}`);
+    // HTTP Host header uses bracket notation for IPv6: [::1]:3000
+    if (alias.includes(":")) {
+      hosts.push(`[${alias}]`);
+      hosts.push(`[${alias}]:${port}`);
+    } else {
+      hosts.push(`${alias}:${port}`);
+    }
   }
   // Also add the configured host if it's not already covered
   if (!localhostAliases.includes(host)) {
     hosts.push(host);
-    hosts.push(`${host}:${port}`);
+    if (host.includes(":") && !host.startsWith("[")) {
+      hosts.push(`[${host}]`);
+      hosts.push(`[${host}]:${port}`);
+    } else {
+      hosts.push(`${host}:${port}`);
+    }
   }
   return hosts;
 }
@@ -37,14 +48,8 @@ export function startStreamableHTTPServer(server: Server): http.Server {
 
   const host = process.env.HOST || "localhost";
 
-  let port = 3000;
-  try {
-    port = parseInt(process.env.PORT || "3000", 10);
-  } catch (e) {
-    console.error(
-      "Invalid PORT environment variable, using default port 3000."
-    );
-  }
+  const parsed = parseInt(process.env.PORT || "3000", 10);
+  const port = Number.isNaN(parsed) ? 3000 : parsed;
 
   const allowedHosts = process.env.DNS_REBINDING_ALLOWED_HOST
     ? [process.env.DNS_REBINDING_ALLOWED_HOST]
