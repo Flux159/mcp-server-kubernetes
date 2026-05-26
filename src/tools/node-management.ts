@@ -6,7 +6,7 @@
  * Note: Use kubectl_get with resourceType="nodes" to list nodes.
  */
 
-import { execFileSync } from "child_process";
+import { execFileSyncSafe as execFileSync } from "../security/kubectl-flags.js";
 import { getSpawnMaxBuffer } from "../config/max-buffer.js";
 
 /**
