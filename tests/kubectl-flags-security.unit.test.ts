@@ -1,7 +1,12 @@
 import { expect, test, describe, beforeEach, afterEach } from "vitest";
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
-import { assertNoDangerousFlags } from "../src/security/kubectl-flags.js";
+import {
+  assertNoDangerousFlags,
+  assertSafeArgv,
+  execFileSyncSafe,
+} from "../src/security/kubectl-flags.js";
 import { kubectlGeneric } from "../src/tools/kubectl-generic.js";
+import { kubectlGet } from "../src/tools/kubectl-get.js";
 import { KubernetesManager } from "../src/utils/kubernetes-manager.js";
 
 describe("assertNoDangerousFlags", () => {
@@ -198,5 +203,134 @@ describe("kubectl_generic refuses dangerous flags before executing kubectl", () 
       expect(e).toBeInstanceOf(McpError);
       expect((e as McpError).code).toBe(ErrorCode.InvalidParams);
     }
+  });
+});
+
+describe("assertSafeArgv (full-argv guard for positional slots)", () => {
+  const originalEnv = process.env.ALLOW_KUBECTL_UNSAFE_FLAGS;
+
+  beforeEach(() => {
+    delete process.env.ALLOW_KUBECTL_UNSAFE_FLAGS;
+  });
+
+  afterEach(() => {
+    if (originalEnv === undefined) {
+      delete process.env.ALLOW_KUBECTL_UNSAFE_FLAGS;
+    } else {
+      process.env.ALLOW_KUBECTL_UNSAFE_FLAGS = originalEnv;
+    }
+  });
+
+  test("rejects --server smuggled into a positional slot", () => {
+    // Mirrors `kubectl get pods <name>` with name="--server=...".
+    expect(() =>
+      assertSafeArgv(["get", "pods", "--server=https://attacker", "-n", "default"])
+    ).toThrow(/--server/);
+  });
+
+  test("rejects --kubeconfig / --token / -s anywhere in argv", () => {
+    expect(() => assertSafeArgv(["get", "--kubeconfig=/tmp/evil"])).toThrow(
+      /kubeconfig/
+    );
+    expect(() => assertSafeArgv(["get", "--token=stolen"])).toThrow(/--token/);
+    expect(() => assertSafeArgv(["get", "-s", "https://attacker"])).toThrow(/-s/);
+  });
+
+  test("rejects helm credential/target flags (kube-* prefix)", () => {
+    expect(() =>
+      assertSafeArgv(["upgrade", "rel", "chart", "--kube-apiserver=https://x"])
+    ).toThrow(/kube-apiserver/);
+    expect(() =>
+      assertSafeArgv(["install", "rel", "chart", "--kube-token=stolen"])
+    ).toThrow(/kube-token/);
+  });
+
+  test("allows --context (every tool emits it; cannot redirect on its own)", () => {
+    expect(() =>
+      assertSafeArgv(["get", "pods", "--context", "prod", "-o", "json"])
+    ).not.toThrow();
+  });
+
+  test("allows benign structural flags and positionals", () => {
+    expect(() =>
+      assertSafeArgv([
+        "get",
+        "pods",
+        "my-pod",
+        "-n",
+        "default",
+        "-l",
+        "app=foo",
+        "--field-selector=status.phase=Running",
+        "-o",
+        "json",
+      ])
+    ).not.toThrow();
+  });
+
+  test("ALLOW_KUBECTL_UNSAFE_FLAGS=true bypasses the argv guard", () => {
+    process.env.ALLOW_KUBECTL_UNSAFE_FLAGS = "true";
+    expect(() =>
+      assertSafeArgv(["get", "pods", "--server=https://attacker"])
+    ).not.toThrow();
+  });
+});
+
+describe("execFileSyncSafe wrapper", () => {
+  const originalEnv = process.env.ALLOW_KUBECTL_UNSAFE_FLAGS;
+
+  afterEach(() => {
+    if (originalEnv === undefined) {
+      delete process.env.ALLOW_KUBECTL_UNSAFE_FLAGS;
+    } else {
+      process.env.ALLOW_KUBECTL_UNSAFE_FLAGS = originalEnv;
+    }
+  });
+
+  test("throws before exec when argv carries a dangerous flag", () => {
+    delete process.env.ALLOW_KUBECTL_UNSAFE_FLAGS;
+    expect(() =>
+      // "false" would exit non-zero if it ran; the guard must fire first.
+      execFileSyncSafe("false", ["--server=https://attacker"], {
+        encoding: "utf8",
+      })
+    ).toThrow(/--server/);
+  });
+
+  test("executes normally when argv is clean", () => {
+    const out = execFileSyncSafe("printf", ["%s", "ok"], { encoding: "utf8" });
+    expect(out).toBe("ok");
+  });
+});
+
+describe("sibling tools refuse the positional flag-injection PoC", () => {
+  // The 2026-05-22 fix only guarded kubectl_generic's flags/args. These tools
+  // push user input (name, resourceType, ...) into bare positional argv slots,
+  // so the report's `name: "--server=..."` payload reached kubectl. The shared
+  // execFileSyncSafe wrapper must now block it before kubectl is invoked.
+  const stubManager = {} as KubernetesManager;
+
+  beforeEach(() => {
+    delete process.env.ALLOW_KUBECTL_UNSAFE_FLAGS;
+  });
+
+  test("kubectl_get blocks name='--server=...' (exact report PoC)", async () => {
+    await expect(
+      kubectlGet(stubManager, {
+        resourceType: "pods",
+        name: "--server=https://127.0.0.1:19012",
+        namespace: "default",
+      })
+    ).rejects.toThrow(/--server/);
+  });
+
+  test("kubectl_generic blocks name='--server=...' (positional bypass)", async () => {
+    await expect(
+      kubectlGeneric(stubManager, {
+        command: "get",
+        resourceType: "pods",
+        name: "--server=https://attacker.example.com",
+      })
+    ).rejects.toThrow(/--server/);
   });
 });

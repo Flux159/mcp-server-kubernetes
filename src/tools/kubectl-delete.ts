@@ -1,5 +1,5 @@
 import { KubernetesManager } from "../types.js";
-import { execFileSync } from "child_process";
+import { execFileSyncSafe } from "../security/kubectl-flags.js";
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import * as fs from "fs";
 import * as path from "path";
@@ -156,7 +156,7 @@ export async function kubectlDelete(
 
     // Execute the command
     try {
-      const result = execFileSync(command, args, {
+      const result = execFileSyncSafe(command, args, {
         encoding: "utf8",
         maxBuffer: getSpawnMaxBuffer(),
         env: { ...process.env, KUBECONFIG: process.env.KUBECONFIG },

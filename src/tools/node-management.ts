@@ -6,7 +6,7 @@
  * Note: Use kubectl_get with resourceType="nodes" to list nodes.
  */
 
-import { execFileSync } from "child_process";
+import { execFileSyncSafe } from "../security/kubectl-flags.js";
 import { getSpawnMaxBuffer } from "../config/max-buffer.js";
 
 /**
@@ -111,7 +111,7 @@ interface NodeManagementParams {
  */
 const executeCommand = (command: string, args: string[]): string => {
   try {
-    return execFileSync(command, args, {
+    return execFileSyncSafe(command, args, {
       encoding: "utf8",
       timeout: 300000, // 5 minutes timeout for node operations
       maxBuffer: getSpawnMaxBuffer(),
