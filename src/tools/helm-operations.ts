@@ -5,7 +5,7 @@
  * Supports local chart paths, remote repositories, and custom values.
  */
 
-import { execFileSync } from "child_process";
+import { execFileSyncSafe as execFileSync } from "../security/kubectl-flags.js";
 import { writeFileSync, unlinkSync } from "fs";
 import { dump } from "js-yaml";
 import { getSpawnMaxBuffer } from "../config/max-buffer.js";

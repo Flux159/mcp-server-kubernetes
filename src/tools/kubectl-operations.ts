@@ -1,4 +1,4 @@
-import { execFileSync } from "child_process";
+import { execFileSyncSafe as execFileSync } from "../security/kubectl-flags.js";
 import {
   ExplainResourceParams,
   ListApiResourcesParams,
