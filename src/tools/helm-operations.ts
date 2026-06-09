@@ -5,7 +5,7 @@
  * Supports local chart paths, remote repositories, and custom values.
  */
 
-import { execFileSync } from "child_process";
+import { execFileSyncSafe } from "../security/kubectl-flags.js";
 import { writeFileSync, unlinkSync } from "fs";
 import { dump } from "js-yaml";
 import { getSpawnMaxBuffer } from "../config/max-buffer.js";
@@ -157,7 +157,7 @@ export const uninstallHelmChartSchema = {
  */
 const executeCommand = (command: string, args: string[]): string => {
   try {
-    return execFileSync(command, args, {
+    return execFileSyncSafe(command, args, {
       encoding: "utf8",
       timeout: 300000, // 5 minutes timeout
       maxBuffer: getSpawnMaxBuffer(),

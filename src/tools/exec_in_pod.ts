@@ -10,7 +10,7 @@
  */
 
 import { KubernetesManager } from "../types.js";
-import { execFileSync } from "child_process";
+import { execFileSyncSafe } from "../security/kubectl-flags.js";
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import { getSpawnMaxBuffer } from "../config/max-buffer.js";
 import { contextParameter, namespaceParameter } from "../models/common-parameters.js";
@@ -116,7 +116,7 @@ export async function execInPod(
 
     const timeoutMs = input.timeout || 60000;
 
-    const result = execFileSync("kubectl", args, {
+    const result = execFileSyncSafe("kubectl", args, {
       encoding: "utf8",
       maxBuffer: getSpawnMaxBuffer(),
       timeout: timeoutMs,

@@ -1,5 +1,5 @@
 import { KubernetesManager } from "../types.js";
-import { execFileSync } from "child_process";
+import { execFileSyncSafe } from "../security/kubectl-flags.js";
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import { getSpawnMaxBuffer } from "../config/max-buffer.js";
 
@@ -74,7 +74,7 @@ export async function kubectlContext(
           listArgs.push("-o", "name");
         } else if (output === "custom" || output === "json") {
           // For custom or JSON output, we'll format it ourselves
-          const rawResult = execFileSync(command, listArgs, {
+          const rawResult = execFileSyncSafe(command, listArgs, {
             encoding: "utf8",
             maxBuffer: getSpawnMaxBuffer(),
             env: { ...process.env, KUBECONFIG: process.env.KUBECONFIG },
@@ -143,7 +143,7 @@ export async function kubectlContext(
         }
 
         // Execute the command for non-json outputs
-        result = execFileSync(command, listArgs, {
+        result = execFileSyncSafe(command, listArgs, {
           encoding: "utf8",
           maxBuffer: getSpawnMaxBuffer(),
           env: { ...process.env, KUBECONFIG: process.env.KUBECONFIG },
@@ -156,7 +156,7 @@ export async function kubectlContext(
 
         // Execute the command
         try {
-          const currentContext = execFileSync(command, getArgs, {
+          const currentContext = execFileSyncSafe(command, getArgs, {
             encoding: "utf8",
             maxBuffer: getSpawnMaxBuffer(),
             env: { ...process.env, KUBECONFIG: process.env.KUBECONFIG },
@@ -164,7 +164,7 @@ export async function kubectlContext(
 
           if (detailed) {
             // For detailed context info, we need to use get-contexts and filter
-            const allContextsOutput = execFileSync(
+            const allContextsOutput = execFileSyncSafe(
               command,
               ["config", "get-contexts"],
               {
@@ -265,7 +265,7 @@ export async function kubectlContext(
 
         // First check if the context exists
         try {
-          const allContextsOutput = execFileSync(
+          const allContextsOutput = execFileSyncSafe(
             command,
             ["config", "get-contexts", "-o", "name"],
             {
@@ -300,7 +300,7 @@ export async function kubectlContext(
           const setArgs = ["config", "use-context", contextName];
 
           // Execute the command
-          result = execFileSync(command, setArgs, {
+          result = execFileSyncSafe(command, setArgs, {
             encoding: "utf8",
             maxBuffer: getSpawnMaxBuffer(),
             env: { ...process.env, KUBECONFIG: process.env.KUBECONFIG },

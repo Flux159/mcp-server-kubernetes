@@ -1,5 +1,5 @@
 import { KubernetesManager } from "../types.js";
-import { execFileSync } from "child_process";
+import { execFileSyncSafe } from "../security/kubectl-flags.js";
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import { getSpawnMaxBuffer } from "../config/max-buffer.js";
 import { contextParameter, namespaceParameter } from "../models/common-parameters.js";
@@ -111,7 +111,7 @@ export async function kubectlRollout(
         args.push("--watch");
         // For watch we are limited in what we can do - we'll execute it with a reasonable timeout
         // and capture the output until that point
-        const result = execFileSync(command, args, {
+        const result = execFileSyncSafe(command, args, {
           encoding: "utf8",
           maxBuffer: getSpawnMaxBuffer(),
           timeout: 15000, // Reduced from 30 seconds to 15 seconds
@@ -129,7 +129,7 @@ export async function kubectlRollout(
           ],
         };
       } else {
-        const result = execFileSync(command, args, {
+        const result = execFileSyncSafe(command, args, {
           encoding: "utf8",
           maxBuffer: getSpawnMaxBuffer(),
           env: { ...process.env, KUBECONFIG: process.env.KUBECONFIG },

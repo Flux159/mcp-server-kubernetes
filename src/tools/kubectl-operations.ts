@@ -1,4 +1,4 @@
-import { execFileSync } from "child_process";
+import { execFileSyncSafe } from "../security/kubectl-flags.js";
 import {
   ExplainResourceParams,
   ListApiResourcesParams,
@@ -83,7 +83,7 @@ export const listApiResourcesSchema = {
 
 const executeKubectlCommand = (command: string, args: string[]): string => {
   try {
-    return execFileSync(command, args, {
+    return execFileSyncSafe(command, args, {
       encoding: "utf8",
       maxBuffer: getSpawnMaxBuffer(),
       env: { ...process.env, KUBECONFIG: process.env.KUBECONFIG },

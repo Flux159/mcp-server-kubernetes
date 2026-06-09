@@ -1,5 +1,5 @@
 import { KubernetesManager } from "../types.js";
-import { execFileSync } from "child_process";
+import { execFileSyncSafe } from "../security/kubectl-flags.js";
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import { getSpawnMaxBuffer } from "../config/max-buffer.js";
 import {
@@ -113,7 +113,7 @@ export async function kubectlLogs(
 
       // Execute the command
       try {
-        const result = execFileSync(command, args, {
+        const result = execFileSyncSafe(command, args, {
           encoding: "utf8",
           maxBuffer: getSpawnMaxBuffer(),
           env: { ...process.env, KUBECONFIG: process.env.KUBECONFIG },
@@ -155,7 +155,7 @@ export async function kubectlLogs(
           "jsonpath='{.items[*].metadata.name}'",
         ];
         try {
-          const jobs = execFileSync(command, jobsArgs, {
+          const jobs = execFileSyncSafe(command, jobsArgs, {
             encoding: "utf8",
             maxBuffer: getSpawnMaxBuffer(),
             env: { ...process.env, KUBECONFIG: process.env.KUBECONFIG },
@@ -221,7 +221,7 @@ export async function kubectlLogs(
           if (!selectorArgs) {
             throw new Error("Selector command is undefined");
           }
-          const selectorJson = execFileSync(command, selectorArgs, {
+          const selectorJson = execFileSyncSafe(command, selectorArgs, {
             encoding: "utf8",
             maxBuffer: getSpawnMaxBuffer(),
             env: { ...process.env, KUBECONFIG: process.env.KUBECONFIG },
@@ -325,7 +325,7 @@ async function getLabelSelectorLogs(
       "-o",
       "jsonpath='{.items[*].metadata.name}'",
     ];
-    const pods = execFileSync(command, podsArgs, {
+    const pods = execFileSyncSafe(command, podsArgs, {
       encoding: "utf8",
       maxBuffer: getSpawnMaxBuffer(),
       env: { ...process.env, KUBECONFIG: process.env.KUBECONFIG },
@@ -368,7 +368,7 @@ async function getLabelSelectorLogs(
       podArgs = addLogOptions(podArgs, input);
 
       try {
-        const logs = execFileSync(command, podArgs, {
+        const logs = execFileSyncSafe(command, podArgs, {
           encoding: "utf8",
           maxBuffer: getSpawnMaxBuffer(),
           env: { ...process.env, KUBECONFIG: process.env.KUBECONFIG },

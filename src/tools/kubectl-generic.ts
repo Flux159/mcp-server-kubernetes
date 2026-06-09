@@ -1,5 +1,5 @@
 import { KubernetesManager } from "../types.js";
-import { execFileSync } from "child_process";
+import { execFileSyncSafe } from "../security/kubectl-flags.js";
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import { getSpawnMaxBuffer } from "../config/max-buffer.js";
 import {
@@ -131,7 +131,7 @@ export async function kubectlGeneric(
     // Execute the command
     try {
       console.error(`Executing: kubectl ${cmdArgs.join(" ")}`);
-      const result = execFileSync(command, cmdArgs, {
+      const result = execFileSyncSafe(command, cmdArgs, {
         encoding: "utf8",
         maxBuffer: getSpawnMaxBuffer(),
         env: { ...process.env, KUBECONFIG: process.env.KUBECONFIG },
