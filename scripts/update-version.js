@@ -27,6 +27,10 @@ const files = [
     }
   },
   {
+    path: 'src/config/server-config.ts',
+    update: (content) => content.replace(/version:\s*"[^"]+"/, `version: "${version}"`)
+  },
+  {
     path: 'manifest.json',
     update: (content) => {
       const manifest = JSON.parse(content);
@@ -77,4 +81,4 @@ if (hasErrors) {
   process.exit(1);
 } else {
   console.log(`\n🎉 All files updated to version ${version}`);
-} 
+}

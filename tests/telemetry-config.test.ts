@@ -302,7 +302,7 @@ describe('Telemetry Configuration', () => {
       const summary = getTelemetryConfigSummary();
       expect(summary).toContain('Telemetry: Enabled');
       expect(summary).toContain('Endpoint: http://localhost:4317');
-      expect(summary).toContain('Service: kubernetes@0.1.0');
+      expect(summary).toContain('Service: kubernetes@3.9.0');
     });
 
     it('should include sampler in summary', () => {

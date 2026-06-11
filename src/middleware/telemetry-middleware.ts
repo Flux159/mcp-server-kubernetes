@@ -1,5 +1,6 @@
 import { trace, context, SpanStatusCode, Span } from "@opentelemetry/api";
 import { CallToolRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import { serverConfig } from "../config/server-config.js";
 import { getTelemetryConfig } from "../config/telemetry-config.js";
 
 /**
@@ -8,7 +9,7 @@ import { getTelemetryConfig } from "../config/telemetry-config.js";
  */
 
 // Get tracer instance
-const tracer = trace.getTracer("mcp-server-kubernetes", "0.1.0");
+const tracer = trace.getTracer(serverConfig.name, serverConfig.version);
 
 /**
  * Tool call handler function type
