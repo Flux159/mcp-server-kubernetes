@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { getTelemetryConfig, initializeTelemetry, getTelemetryConfigSummary } from '../src/config/telemetry-config.js';
+import { serverConfig } from '../src/config/server-config.js';
 
 describe('Telemetry Configuration', () => {
   let originalEnv: NodeJS.ProcessEnv;
@@ -302,7 +303,7 @@ describe('Telemetry Configuration', () => {
       const summary = getTelemetryConfigSummary();
       expect(summary).toContain('Telemetry: Enabled');
       expect(summary).toContain('Endpoint: http://localhost:4317');
-      expect(summary).toContain('Service: kubernetes@3.9.0');
+      expect(summary).toContain(`Service: ${serverConfig.name}@${serverConfig.version}`);
     });
 
     it('should include sampler in summary', () => {
