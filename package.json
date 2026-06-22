@@ -46,7 +46,7 @@
     "@opentelemetry/sdk-node": "0.219.0",
     "@opentelemetry/semantic-conventions": "1.40.0",
     "express": "4.21.2",
-    "js-yaml": "4.1.1",
+    "js-yaml": "4.2.0",
     "yaml": "2.8.3",
     "zod": "3.25.76"
   },
