@@ -328,6 +328,32 @@ describe("kubectl_generic command", () => {
     expect(deleteResult.content[0].text).toContain("deleted");
   });
 
+  test("kubectl_generic supports allNamespaces parameter", async () => {
+    // Get pods across all namespaces using the allNamespaces parameter,
+    // also passing a namespace to verify allNamespaces takes precedence
+    const result = await client.request(
+      {
+        method: "tools/call",
+        params: {
+          name: "kubectl_generic",
+          arguments: {
+            command: "get",
+            resourceType: "pods",
+            namespace: "default",
+            allNamespaces: true
+          },
+        },
+      },
+      z.any()
+    ) as KubectlResponse;
+
+    expect(result.content[0].type).toBe("text");
+    // With --all-namespaces, kubectl adds a NAMESPACE column
+    expect(result.content[0].text).toMatch(/NAMESPACE\s+NAME/);
+    // kube-system pods should be included, proving it's not scoped to default
+    expect(result.content[0].text).toContain("kube-system");
+  });
+
   test("kubectl_generic handles errors gracefully", async () => {
     const nonExistentResource = "non-existent-resource-" + Date.now();
     
