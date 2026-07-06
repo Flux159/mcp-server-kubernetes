@@ -385,6 +385,7 @@ server.setRequestHandler(
             resourceType?: string;
             name?: string;
             namespace?: string;
+            allNamespaces?: boolean;
             outputFormat?: string;
             flags?: Record<string, any>;
             args?: string[];

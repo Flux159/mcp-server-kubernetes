@@ -36,6 +36,11 @@ export const kubectlGenericSchema = {
         description: "Resource name",
       },
       namespace: namespaceParameter,
+      allNamespaces: {
+        type: "boolean",
+        description: "If true, run the command across all namespaces",
+        default: false,
+      },
       outputFormat: {
         type: "string",
         description: "Output format (e.g. json, yaml, wide)",
@@ -65,6 +70,7 @@ export async function kubectlGeneric(
     resourceType?: string;
     name?: string;
     namespace?: string;
+    allNamespaces?: boolean;
     outputFormat?: string;
     flags?: Record<string, any>;
     args?: string[];
@@ -95,8 +101,11 @@ export async function kubectlGeneric(
       cmdArgs.push(input.name);
     }
 
-    // Add namespace if provided
-    if (input.namespace) {
+    // Add namespace scoping: --all-namespaces takes precedence over a
+    // specific namespace (kubectl rejects using both together)
+    if (input.allNamespaces) {
+      cmdArgs.push("--all-namespaces");
+    } else if (input.namespace) {
       cmdArgs.push(`--namespace=${input.namespace}`);
     }
 
