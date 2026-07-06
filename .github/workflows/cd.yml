@@ -92,7 +92,7 @@ jobs:
           # Update the version in all files using the npm script
           npm run version:update ${{ steps.version.outputs.current-version }}
 
-          git add package.json manifest.json CITATION.cff README.md gemini-extension.json
+          git add package.json src/config/server-config.ts manifest.json CITATION.cff README.md gemini-extension.json
           git commit -m "Bump version to ${{ steps.version.outputs.current-version }}"
 
           # Create and push the tag
