@@ -7,6 +7,7 @@ import {
 } from "../src/security/kubectl-flags.js";
 import { kubectlGeneric } from "../src/tools/kubectl-generic.js";
 import { kubectlGet } from "../src/tools/kubectl-get.js";
+import { startPortForward } from "../src/tools/port_forward.js";
 import { KubernetesManager } from "../src/utils/kubernetes-manager.js";
 
 describe("assertNoDangerousFlags", () => {
@@ -332,5 +333,36 @@ describe("sibling tools refuse the positional flag-injection PoC", () => {
         name: "--server=https://attacker.example.com",
       })
     ).rejects.toThrow(/--server/);
+  });
+
+  // port_forward uses spawn (long-running process) instead of the shared
+  // execFileSyncSafe wrapper, so it guards its own argv. resourceType is pushed
+  // into a positional slot as `${resourceType}/${resourceName}`, so a payload
+  // like resourceType="--server=..." would otherwise redirect kubectl.
+  test("port_forward blocks resourceType='--server=...' before spawning", async () => {
+    await expect(
+      startPortForward(stubManager, {
+        resourceType: "--server=https://127.0.0.1:19099",
+        resourceName: "web",
+        localPort: 8080,
+        targetPort: 80,
+        namespace: "default",
+      })
+    ).rejects.toThrow(/--server/);
+  });
+
+  test("port_forward rejection is an McpError with InvalidParams code", async () => {
+    try {
+      await startPortForward(stubManager, {
+        resourceType: "--server=https://attacker",
+        resourceName: "web",
+        localPort: 8080,
+        targetPort: 80,
+      });
+      throw new Error("should have thrown");
+    } catch (e) {
+      expect(e).toBeInstanceOf(McpError);
+      expect((e as McpError).code).toBe(ErrorCode.InvalidParams);
+    }
   });
 });
