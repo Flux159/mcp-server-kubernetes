@@ -1,11 +1,18 @@
 import { spawn } from "child_process";
 import { z } from "zod";
+import { McpError } from "@modelcontextprotocol/sdk/types.js";
 import { KubernetesManager } from "../utils/kubernetes-manager.js";
+import { assertSafeArgv } from "../security/kubectl-flags.js";
 
 // Use spawn instead of exec because port-forward is a long-running process
 async function executePortForward(
   args: string[]
 ): Promise<{ success: boolean; message: string; pid: number }> {
+  // port_forward uses spawn (long-running process) rather than the shared
+  // execFileSyncSafe wrapper, so it must run the argv guard itself. Otherwise
+  // user-supplied values pushed into positional slots (e.g. resourceType) can
+  // smuggle credential/target-redirecting flags such as --server.
+  assertSafeArgv(args);
   return new Promise((resolve, reject) => {
     const process = spawn("kubectl", args);
 
@@ -122,6 +129,9 @@ export async function startPortForward(
       ],
     };
   } catch (error: any) {
+    // Preserve McpError (e.g. the argv safety guard's InvalidParams rejection)
+    // so the client sees the real reason instead of a generic InternalError.
+    if (error instanceof McpError) throw error;
     throw new Error(`Failed to execute port-forward: ${error.message}`);
   }
 }
