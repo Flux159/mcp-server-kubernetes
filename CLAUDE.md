@@ -88,3 +88,39 @@ The server requires:
 - Helm v3 for chart operations (optional)
 
 **Non-destructive mode** disables: kubectl_delete, uninstall_helm_chart, cleanup operations, and kubectl_generic (which could contain destructive commands).
+
+## Release Process
+
+Releases are cut by tagging a version and creating a matching GitHub release. The CD pipeline does the rest (npm publish, Docker image, etc.) automatically once the tag and release exist — there are no manual publish steps. Historically this was done by hand in the GitHub UI; the agent that merges a release-worthy PR should now do it directly once the PR is merged.
+
+After the PR is merged to `main`:
+
+1. **Bump the version** in every version-bearing file, using the same `<x.y.z>` value in each:
+   - `package.json`
+   - `manifest.json`
+   - `gemini-extension.json`
+   - `CITATION.cff`
+   - `src/config/server-config.ts`
+
+   Commit as `Bump version to <x.y.z>` and push to `main`.
+
+2. **Tag and release.** Create the tag and a GitHub release targeting the bump commit:
+   - Tag name: `v<x.y.z>` (e.g. `v4.0.2`)
+   - Release title: `Release v<x.y.z>` (e.g. `Release v4.0.2`)
+   - Release notes: one or two terse lines describing the change, referencing the PR number (e.g. `(#332)`), matching the style of prior releases.
+
+   Example: `gh release create v4.0.2 --target <bump-commit-sha> --title "Release v4.0.2" --notes "..."` (this creates the `v4.0.2` tag as well).
+
+Creating the tag and release is the only manual step — the CD script picks it up from there.
+
+## Security Fixes and Coordinated Disclosure
+
+When a change fixes a security issue tracked by a GHSA advisory or CVE, keep the disclosure in the maintainer's hands. Do **not** put any of the following into public channels — the PR title, PR description, PR comments, commit messages, or release notes:
+
+- the GHSA or CVE identifier
+- the vulnerability details, attack vector, impact, or affected-secret list
+- a proof-of-concept or reproduction steps
+
+Instead, describe the change neutrally as a hardening/robustness improvement — what the code now does, not how it could be exploited. The GHSA advisory and CVE are drafted and published separately by the maintainer; premature disclosure in a public PR or release undermines coordinated disclosure.
+
+Once the advisory is public, the release notes may be updated to reference the GHSA/CVE identifier (older releases cite them this way).
