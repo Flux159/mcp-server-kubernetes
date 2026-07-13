@@ -6,6 +6,7 @@ import * as path from "path";
 import * as os from "os";
 import { getSpawnMaxBuffer } from "../config/max-buffer.js";
 import { contextParameter, namespaceParameter, dryRunParameter } from "../models/common-parameters.js";
+import { isRemoteTransport } from "../security/transport.js";
 
 export const kubectlCreateSchema = {
   name: "kubectl_create",
@@ -47,7 +48,8 @@ export const kubectlCreateSchema = {
       },
       filename: {
         type: "string",
-        description: "Path to a YAML file to create resources from",
+        description:
+          "Path to a YAML file to create resources from. The path is read on the machine running the MCP server, so it is rejected when the server runs over a remote (SSE/Streamable HTTP) transport; use 'manifest' to pass the file's contents instead.",
       },
 
       // Resource type to create (determines which subcommand to use)
@@ -75,7 +77,28 @@ export const kubectlCreateSchema = {
         type: "array",
         items: { type: "string" },
         description:
-          'Path to file for creating configmap (e.g. ["key1=/path/to/file1", "key2=/path/to/file2"])',
+          'Path to file for creating configmap/secret (e.g. ["key1=/path/to/file1", "key2=/path/to/file2"]). The path is read on the machine running the MCP server, so it is rejected when the server runs over a remote (SSE/Streamable HTTP) transport; use "fromFileContent" to pass file contents directly instead.',
+      },
+      fromFileContent: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            key: {
+              type: "string",
+              description:
+                "Key to store the content under in the configmap/secret",
+            },
+            content: {
+              type: "string",
+              description: "The file content to store",
+            },
+          },
+          required: ["key", "content"],
+          additionalProperties: false,
+        },
+        description:
+          'Inline file contents for creating a configmap/secret, provided by the client instead of a server-side path (e.g. [{"key": "app.conf", "content": "..."}]). Safe on all transports; use this instead of "fromFile" on remote (SSE/Streamable HTTP) servers.',
       },
 
       // Namespace specific parameters
@@ -175,6 +198,7 @@ export async function kubectlCreate(
     // ConfigMap specific
     fromLiteral?: string[];
     fromFile?: string[];
+    fromFileContent?: { key: string; content: string }[];
 
     // Secret specific
     secretType?: "generic" | "docker-registry" | "tls";
@@ -220,6 +244,28 @@ export async function kubectlCreate(
       );
     }
 
+    // Reject server-side filesystem reads on remote transports. Over SSE /
+    // Streamable HTTP the path resolves on the MCP server host, not the
+    // client, so `filename` (-f) and `fromFile` (--from-file) would let any
+    // client that can reach the endpoint read arbitrary server files
+    // (kubeconfig, service-account token, /proc/self/environ, etc.). See
+    // GHSA-m67f-jxm9-cvx8. Clients on these transports must pass content
+    // inline via `manifest` or `fromFileContent` instead.
+    if (isRemoteTransport()) {
+      if (input.filename) {
+        throw new McpError(
+          ErrorCode.InvalidRequest,
+          "The 'filename' parameter reads a file from the MCP server's filesystem and is disabled on remote (SSE/Streamable HTTP) transports. Pass the file contents via 'manifest' instead."
+        );
+      }
+      if (input.fromFile && input.fromFile.length > 0) {
+        throw new McpError(
+          ErrorCode.InvalidRequest,
+          "The 'fromFile' parameter reads files from the MCP server's filesystem and is disabled on remote (SSE/Streamable HTTP) transports. Pass the file contents via 'fromFileContent' instead."
+        );
+      }
+    }
+
     // Set up common parameters
     const namespace = input.namespace || "default";
     const dryRun = input.dryRun || false;
@@ -229,16 +275,48 @@ export async function kubectlCreate(
 
     const command = "kubectl";
     const args = ["create"];
-    let tempFile: string | null = null;
+    const tempFiles: string[] = [];
+
+    // Write client-provided content to a private temp file and return its
+    // path. The file is tracked for cleanup after kubectl runs.
+    const writeTempFile = (
+      contents: string,
+      label: string,
+      ext = ""
+    ): string => {
+      const tmpDir = os.tmpdir();
+      const tempFile = path.join(
+        tmpDir,
+        `create-${label}-${Date.now()}-${tempFiles.length}${ext}`
+      );
+      fs.writeFileSync(tempFile, contents, { mode: 0o600 });
+      tempFiles.push(tempFile);
+      return tempFile;
+    };
+
+    // Emit `--from-file=<key>=<tempfile>` args for inline content supplied by
+    // the client. Each entry's content is written to a server-side temp file
+    // (never a client-controlled path), so this is safe on all transports.
+    const pushFromFileContent = (
+      entries: { key: string; content: string }[]
+    ) => {
+      entries.forEach((entry) => {
+        if (!entry.key) {
+          throw new McpError(
+            ErrorCode.InvalidRequest,
+            "Each fromFileContent entry requires a non-empty 'key'"
+          );
+        }
+        const tempFile = writeTempFile(entry.content ?? "", "fromfile");
+        args.push(`--from-file=${entry.key}=${tempFile}`);
+      });
+    };
 
     // Process manifest content if provided (file-based creation)
     if (input.manifest || input.filename) {
       if (input.manifest) {
         // Create temporary file for the manifest
-        const tmpDir = os.tmpdir();
-        tempFile = path.join(tmpDir, `create-manifest-${Date.now()}.yaml`);
-        fs.writeFileSync(tempFile, input.manifest);
-        args.push("-f", tempFile);
+        args.push("-f", writeTempFile(input.manifest, "manifest", ".yaml"));
       } else if (input.filename) {
         args.push("-f", input.filename);
       }
@@ -259,11 +337,17 @@ export async function kubectlCreate(
             });
           }
 
-          // Add --from-file arguments
+          // Add --from-file arguments (server-side paths; blocked on remote
+          // transports by the guard above)
           if (input.fromFile && input.fromFile.length > 0) {
             input.fromFile.forEach((file) => {
               args.push(`--from-file=${file}`);
             });
+          }
+
+          // Add inline file contents (safe on all transports)
+          if (input.fromFileContent && input.fromFileContent.length > 0) {
+            pushFromFileContent(input.fromFileContent);
           }
           break;
 
@@ -284,11 +368,17 @@ export async function kubectlCreate(
             });
           }
 
-          // Add --from-file arguments
+          // Add --from-file arguments (server-side paths; blocked on remote
+          // transports by the guard above)
           if (input.fromFile && input.fromFile.length > 0) {
             input.fromFile.forEach((file) => {
               args.push(`--from-file=${file}`);
             });
+          }
+
+          // Add inline file contents (safe on all transports)
+          if (input.fromFileContent && input.fromFileContent.length > 0) {
+            pushFromFileContent(input.fromFileContent);
           }
           break;
 
@@ -423,6 +513,17 @@ export async function kubectlCreate(
       args.push("--context", context);
     }
 
+    // Remove any temp files created for inline content.
+    const cleanupTempFiles = () => {
+      tempFiles.forEach((tempFile) => {
+        try {
+          fs.unlinkSync(tempFile);
+        } catch (err) {
+          console.warn(`Failed to delete temporary file ${tempFile}: ${err}`);
+        }
+      });
+    };
+
     // Execute the command
     try {
       const result = execFileSyncSafe(command, args, {
@@ -431,14 +532,8 @@ export async function kubectlCreate(
         env: { ...process.env, KUBECONFIG: process.env.KUBECONFIG },
       });
 
-      // Clean up temp file if created
-      if (tempFile) {
-        try {
-          fs.unlinkSync(tempFile);
-        } catch (err) {
-          console.warn(`Failed to delete temporary file ${tempFile}: ${err}`);
-        }
-      }
+      // Clean up temp files if created
+      cleanupTempFiles();
 
       return {
         content: [
@@ -449,14 +544,8 @@ export async function kubectlCreate(
         ],
       };
     } catch (error: any) {
-      // Clean up temp file if created, even if command failed
-      if (tempFile) {
-        try {
-          fs.unlinkSync(tempFile);
-        } catch (err) {
-          console.warn(`Failed to delete temporary file ${tempFile}: ${err}`);
-        }
-      }
+      // Clean up temp files if created, even if command failed
+      cleanupTempFiles();
 
       throw new McpError(
         ErrorCode.InternalError,
