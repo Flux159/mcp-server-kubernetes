@@ -88,3 +88,32 @@ The server requires:
 - Helm v3 for chart operations (optional)
 
 **Non-destructive mode** disables: kubectl_delete, uninstall_helm_chart, cleanup operations, and kubectl_generic (which could contain destructive commands).
+
+## Release Process
+
+Releases are fully automated by the CD workflow (`.github/workflows/cd.yml`), which triggers on any pushed tag matching `v*`. **The only manual step is creating the tag and a matching GitHub release** — the agent that merges a release-worthy PR should do this directly once the PR is merged.
+
+**Do NOT bump the version numbers yourself.** CD owns the version bump: on tag push it runs `npm run version:update`, updates the version in every version-bearing file (`package.json`, `src/config/server-config.ts`, `manifest.json`, `CITATION.cff`, `README.md`, `gemini-extension.json`, and the Helm chart), commits `Bump version to <x.y.z>` to `main`, then builds and publishes to npm, GHCR/Helm, and Docker Hub, and uploads the release assets. Editing those files by hand collides with that step and breaks the release. Leave the source at the previous version.
+
+To cut a release, after the PR is merged to `main`:
+
+- Create the tag and GitHub release targeting the current tip of `main` (the merge commit):
+  - Tag name: `v<x.y.z>` where `<x.y.z>` is the next patch version (e.g. `v4.0.2` after `v4.0.1`). This must match the version CD will compute, or the release-asset upload will fail.
+  - Release title: `Release v<x.y.z>` (e.g. `Release v4.0.2`)
+  - Release notes: one or two terse lines describing the change, referencing the PR number (e.g. `(#332)`), matching the style of prior releases.
+
+  Example: `gh release create v4.0.2 --target main --title "Release v4.0.2" --notes "..."` (this creates the `v4.0.2` tag, which triggers CD).
+
+That single tag/release is all that's needed — CD handles the version bump, publish, and asset uploads from there.
+
+## Security Fixes and Coordinated Disclosure
+
+When a change fixes a security issue tracked by a GHSA advisory or CVE, keep the disclosure in the maintainer's hands. Do **not** put any of the following into public channels — the PR title, PR description, PR comments, commit messages, or release notes:
+
+- the GHSA or CVE identifier
+- the vulnerability details, attack vector, impact, or affected-secret list
+- a proof-of-concept or reproduction steps
+
+Instead, describe the change neutrally as a hardening/robustness improvement — what the code now does, not how it could be exploited. The GHSA advisory and CVE are drafted and published separately by the maintainer; premature disclosure in a public PR or release undermines coordinated disclosure.
+
+Once the advisory is public, the release notes may be updated to reference the GHSA/CVE identifier (older releases cite them this way).
