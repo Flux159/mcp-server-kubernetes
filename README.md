@@ -2,16 +2,12 @@
 
 [![CI](https://github.com/Flux159/mcp-server-kubernetes/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/mcp-server-kubernetes/actions/workflows/ci.yml)
 [![Language](https://img.shields.io/github/languages/top/Flux159/mcp-server-kubernetes)](https://github.com/yourusername/mcp-server-kubernetes)
-[![Bun](https://img.shields.io/badge/runtime-bun-orange)](https://bun.sh)
 [![Kubernetes](https://img.shields.io/badge/kubernetes-%23326ce5.svg?style=flat&logo=kubernetes&logoColor=white)](https://kubernetes.io/)
 [![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=flat&logo=docker&logoColor=white)](https://www.docker.com/)
 [![Stars](https://img.shields.io/github/stars/Flux159/mcp-server-kubernetes)](https://github.com/Flux159/mcp-server-kubernetes/stargazers)
 [![Issues](https://img.shields.io/github/issues/Flux159/mcp-server-kubernetes)](https://github.com/Flux159/mcp-server-kubernetes/issues)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/Flux159/mcp-server-kubernetes/pulls)
 [![Last Commit](https://img.shields.io/github/last-commit/Flux159/mcp-server-kubernetes)](https://github.com/Flux159/mcp-server-kubernetes/commits/main)
-[![Trust Score](https://archestra.ai/mcp-catalog/api/badge/quality/Flux159/mcp-server-kubernetes)](https://archestra.ai/mcp-catalog/flux159__mcp-server-kubernetes)
-[![HVTrust](https://hvtracker.net/badge/kubernetes-mcp-server.svg)](https://hvtracker.net/agents/kubernetes-mcp-server/)
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Flux159/mcp-server-kubernetes)
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/Flux159/mcp-server-kubernetes/refs/heads/main/icon.png" width="200">
@@ -20,8 +16,6 @@
 MCP Server that can connect to a Kubernetes cluster and manage it. Supports loading kubeconfig from multiple sources in priority order.
 
 https://github.com/user-attachments/assets/f25f8f4e-4d04-479b-9ae0-5dac452dd2ed
-
-<a href="https://glama.ai/mcp/servers/w71ieamqrt"><img width="380" height="200" src="https://glama.ai/mcp/servers/w71ieamqrt/badge" /></a>
 
 ## Installation & Usage
 
