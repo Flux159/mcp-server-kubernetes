@@ -42,6 +42,16 @@ claude mcp add kubernetes -- npx mcp-server-kubernetes
 
 This will automatically configure the server in your Claude Code MCP settings.
 
+### Codex
+
+Add the MCP server to [Codex CLI](https://developers.openai.com/codex/cli/) using the built-in command:
+
+```bash
+codex mcp add kubernetes -- npx mcp-server-kubernetes
+```
+
+This registers the server globally in `~/.codex/config.toml` and makes its tools available in all Codex sessions.
+
 ### Claude Desktop
 
 Add the following configuration to your Claude Desktop config file:
@@ -121,14 +131,6 @@ Windows:
 
 ```shell
 npx mcp-chat --config "%APPDATA%\Claude\claude_desktop_config.json"
-```
-
-## Gemini CLI
-
-[Gemini CLI](https://geminicli.com/) allows you to install mcp servers as extensions. From a shell, install the extension by pointing to this repo:
-
-```shell
-gemini extensions install https://github.com/Flux159/mcp-server-kubernetes
 ```
 
 ## Features
