@@ -425,7 +425,12 @@ Adding clusters to kubectx.
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=Flux159/mcp-server-kubernetes&type=Date)](https://www.star-history.com/#Flux159/mcp-server-kubernetes&Date)
+<a href="https://github.com/Flux159/rust-star-history">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Flux159/mcp-server-kubernetes/star-history/star-history-dark.svg">
+    <img alt="Star History Chart" src="https://raw.githubusercontent.com/Flux159/mcp-server-kubernetes/star-history/star-history.svg">
+  </picture>
+</a>
 
 ## 🖊️ Cite
 
