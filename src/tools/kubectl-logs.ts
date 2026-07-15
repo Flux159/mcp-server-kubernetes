@@ -87,7 +87,7 @@ export async function kubectlLogs(
   }
 ) {
   try {
-    const resourceType = input.resourceType.toLowerCase();
+    const resourceType = (input.resourceType ?? "pod").toLowerCase();
     const name = input.name;
     const namespace = input.namespace || "default";
     const context = input.context || "";
@@ -138,7 +138,7 @@ export async function kubectlLogs(
           "deployment",
           name,
           "-o",
-          "jsonpath='{.spec.selector.matchLabels}'",
+          "jsonpath={.spec.selector.matchLabels}",
         ];
       } else if (resourceType === "job") {
         // For jobs, we use the job-name label
@@ -152,7 +152,7 @@ export async function kubectlLogs(
           "jobs",
           "--selector=job-name=" + name,
           "-o",
-          "jsonpath='{.items[*].metadata.name}'",
+          "jsonpath={.items[*].metadata.name}",
         ];
         try {
           const jobs = execFileSyncSafe(command, jobsArgs, {
@@ -226,7 +226,7 @@ export async function kubectlLogs(
             maxBuffer: getSpawnMaxBuffer(),
             env: { ...process.env, KUBECONFIG: process.env.KUBECONFIG },
           }).trim();
-          const selector = JSON.parse(selectorJson.replace(/'/g, '"'));
+          const selector = JSON.parse(selectorJson);
 
           // Convert to label selector format
           const labelSelector = Object.entries(selector)
@@ -323,7 +323,7 @@ async function getLabelSelectorLogs(
       "pods",
       `--selector=${labelSelector}`,
       "-o",
-      "jsonpath='{.items[*].metadata.name}'",
+      "jsonpath={.items[*].metadata.name}",
     ];
     const pods = execFileSyncSafe(command, podsArgs, {
       encoding: "utf8",
