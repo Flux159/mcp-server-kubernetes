@@ -1,0 +1,17 @@
+# Regenerates the star-history charts daily and publishes them to the
+# star-history branch. See https://github.com/Flux159/rust-star-history
+name: Star History
+
+on:
+  schedule:
+    - cron: '0 5 * * *' # daily 05:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  star-history:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: Flux159/rust-star-history@v0.2.0
