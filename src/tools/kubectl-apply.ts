@@ -6,6 +6,7 @@ import * as path from "path";
 import * as os from "os";
 import { getSpawnMaxBuffer } from "../config/max-buffer.js";
 import { contextParameter, namespaceParameter, dryRunParameter } from "../models/common-parameters.js";
+import { isRemoteTransport } from "../security/transport.js";
 
 export const kubectlApplySchema = {
   name: "kubectl_apply",
@@ -23,7 +24,7 @@ export const kubectlApplySchema = {
       filename: {
         type: "string",
         description:
-          "Path to a YAML file to apply (optional - use either manifest or filename)",
+          "Path to a YAML file to apply (optional - use either manifest or filename). The path is read on the machine running the MCP server, so it is rejected when the server runs over a remote (SSE/Streamable HTTP) transport; use 'manifest' to pass the file's contents instead.",
       },
       namespace: namespaceParameter,
       dryRun: dryRunParameter,
@@ -55,6 +56,19 @@ export async function kubectlApply(
       throw new McpError(
         ErrorCode.InvalidRequest,
         "Either manifest or filename must be provided"
+      );
+    }
+
+    // Reject server-side filesystem reads on remote transports. Over SSE /
+    // Streamable HTTP the path resolves on the MCP server host, not the
+    // client, so `filename` (-f) would let any client that can reach the
+    // endpoint read arbitrary server files (kubeconfig, service-account
+    // token, /proc/self/environ, etc.) via kubectl's parse errors. Clients
+    // on these transports must pass content inline via `manifest` instead.
+    if (isRemoteTransport() && input.filename) {
+      throw new McpError(
+        ErrorCode.InvalidRequest,
+        "The 'filename' parameter reads a file from the MCP server's filesystem and is disabled on remote (SSE/Streamable HTTP) transports. Pass the file contents via 'manifest' instead."
       );
     }
 
