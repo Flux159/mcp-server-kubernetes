@@ -15,7 +15,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: Flux159/rust-star-history@v1.1.1
+        id: chart
+        # Stargazer fetches occasionally hit GitHub's transient anti-scraping
+        # 403 block for minutes at a time; a skipped update is harmless (the
+        # next scheduled run catches up), so warn instead of failing the run
+        continue-on-error: true
         with:
           # The automatic workflow token cannot list stargazers since
           # GitHub's 2026 API change; this is a read-only fine-grained PAT
           token: ${{ secrets.STAR_HISTORY_TOKEN }}
+      - name: Warn instead of failing
+        if: ${{ steps.chart.outcome == 'failure' }}
+        run: echo "::warning::Chart update failed (likely GitHub's transient rate-limit block); charts were not refreshed this run"
