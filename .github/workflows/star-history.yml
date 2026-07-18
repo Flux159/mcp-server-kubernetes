@@ -14,7 +14,7 @@ jobs:
   star-history:
     runs-on: ubuntu-latest
     steps:
-      - uses: Flux159/rust-star-history@v1.1.0
+      - uses: Flux159/rust-star-history@v1.1.1
         with:
           # The automatic workflow token cannot list stargazers since
           # GitHub's 2026 API change; this is a read-only fine-grained PAT
