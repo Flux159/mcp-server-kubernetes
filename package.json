@@ -1,6 +1,6 @@
 {
   "name": "mcp-server-kubernetes",
-  "version": "4.0.6",
+  "version": "4.0.7",
   "description": "MCP server for interacting with Kubernetes clusters via kubectl",
   "license": "MIT",
   "type": "module",
