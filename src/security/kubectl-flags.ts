@@ -87,12 +87,31 @@ function normalizeFlagName(raw: string): string {
   return name.toLowerCase();
 }
 
+// Extract the short-flag letter from a single-dash token, or null if the token
+// is not a single-dash short flag. pflag lets a short flag carry its value
+// attached with no separator ("-shttp://x" == "--server http://x"), so the
+// letter that matters is always the first character after the dash; the rest of
+// the token is the attached value (or a boolean-flag cluster). Long "--" flags
+// never attach a value without "=", so normalizeFlagName already handles them.
+function shortFlagLetter(raw: string): string | null {
+  if (!raw.startsWith("-") || raw.startsWith("--")) return null;
+  const body = raw.slice(1);
+  if (body.length === 0) return null;
+  return body[0].toLowerCase();
+}
+
 function isDangerousFlagName(rawName: string, fromArgs: boolean): boolean {
   const name = normalizeFlagName(rawName);
   if (DANGEROUS_FLAGS.has(name)) return true;
   // Short aliases (-s) are only meaningful when they appear as a CLI token,
-  // not as a key in the `flags` object.
-  if (fromArgs && SHORT_ALIASES.has(name)) return true;
+  // not as a key in the `flags` object. Match both the bare/split forms
+  // (normalizeFlagName -> "s") and the attached form "-sURL" (whose first
+  // post-dash character is the flag pflag actually parses).
+  if (fromArgs) {
+    if (SHORT_ALIASES.has(name)) return true;
+    const short = shortFlagLetter(rawName);
+    if (short !== null && SHORT_ALIASES.has(short)) return true;
+  }
   return false;
 }
 
@@ -156,6 +175,10 @@ export function assertSafeArgv(args: readonly string[]): void {
     if (!tok.startsWith("-")) continue;
     const name = normalizeFlagName(tok);
     if (ARGV_DANGEROUS_FLAGS.has(name) || SHORT_ALIASES.has(name)) reject(tok);
+    // Attached short-flag form ("-sURL"): match the first post-dash character,
+    // which is the flag pflag parses regardless of the trailing value.
+    const short = shortFlagLetter(tok);
+    if (short !== null && SHORT_ALIASES.has(short)) reject(tok);
   }
 }
 

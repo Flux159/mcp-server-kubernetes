@@ -101,6 +101,25 @@ describe("assertNoDangerousFlags", () => {
       ).toThrow(/-s/);
     });
 
+    test("rejects attached short-flag form '-sURL' (no separator)", () => {
+      // pflag parses "-shttp://attacker" as "--server http://attacker".
+      expect(() =>
+        assertNoDangerousFlags(undefined, ["-shttp://attacker.example.com"])
+      ).toThrow(McpError);
+    });
+
+    test("rejects attached short-flag form '-s=URL'", () => {
+      expect(() =>
+        assertNoDangerousFlags(undefined, ["-s=https://attacker"])
+      ).toThrow(McpError);
+    });
+
+    test("does not flag benign short flags with attached values (-oyaml)", () => {
+      expect(() =>
+        assertNoDangerousFlags(undefined, ["-oyaml"])
+      ).not.toThrow();
+    });
+
     test("rejects --insecure-skip-tls-verify=true in args", () => {
       expect(() =>
         assertNoDangerousFlags(undefined, ["--insecure-skip-tls-verify=true"])
@@ -193,6 +212,16 @@ describe("kubectl_generic refuses dangerous flags before executing kubectl", () 
     ).rejects.toThrow(/--server/);
   });
 
+  test("blocks attached short-flag form '-sURL' smuggled through args", async () => {
+    await expect(
+      kubectlGeneric(stubManager, {
+        command: "get",
+        resourceType: "pods",
+        args: ["-shttp://attacker.example.com"],
+      })
+    ).rejects.toThrow(McpError);
+  });
+
   test("error code is InvalidParams (not InternalError)", async () => {
     try {
       await kubectlGeneric(stubManager, {
@@ -235,6 +264,15 @@ describe("assertSafeArgv (full-argv guard for positional slots)", () => {
     );
     expect(() => assertSafeArgv(["get", "--token=stolen"])).toThrow(/--token/);
     expect(() => assertSafeArgv(["get", "-s", "https://attacker"])).toThrow(/-s/);
+  });
+
+  test("rejects attached short-flag form '-sURL' in argv", () => {
+    expect(() =>
+      assertSafeArgv(["get", "pods", "-shttp://attacker.example.com"])
+    ).toThrow(McpError);
+    expect(() =>
+      assertSafeArgv(["get", "pods", "-s=https://attacker"])
+    ).toThrow(McpError);
   });
 
   test("rejects helm credential/target flags (kube-* prefix)", () => {
