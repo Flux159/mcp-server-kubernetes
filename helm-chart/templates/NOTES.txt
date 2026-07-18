@@ -71,6 +71,27 @@
 
 {{- end }}
 
+{{- if and (or (eq .Values.transport.mode "http") (eq .Values.transport.mode "sse")) (not .Values.security.mcpAuthToken) }}
+
+   ############################################################################
+   #  WARNING: {{ upper .Values.transport.mode }} transport is enabled WITHOUT authentication.
+   #
+   #  The MCP endpoint accepts UNAUTHENTICATED requests from any client that can
+   #  reach the Service, and those requests run against your cluster with this
+   #  deployment's RBAC permissions (read Secrets, exec into Pods, etc.).
+   #
+   #  Set a high-entropy token and upgrade:
+   #    helm upgrade {{ .Release.Name }} <chart> \
+   #      --set security.mcpAuthToken=$(openssl rand -hex 32)
+   #
+   #  Clients must then send the header:  X-MCP-AUTH: <token>
+   #
+   #  Only leave this unset if you front the server with your own authenticating
+   #  proxy. Consider also restricting access with a NetworkPolicy
+   #  (networkPolicy.enabled=true).
+   ############################################################################
+{{- end }}
+
 2. Configuration Summary:
 
    Kubeconfig Provider: {{ .Values.kubeconfig.provider }}
@@ -109,6 +130,13 @@
    {{- end }}
    {{- if not (or .Values.security.allowOnlyNonDestructive .Values.security.allowOnlyReadonly .Values.security.allowedTools) }}
    - All tools enabled (full access)
+   {{- end }}
+   {{- if or (eq .Values.transport.mode "http") (eq .Values.transport.mode "sse") }}
+   {{- if .Values.security.mcpAuthToken }}
+   - HTTP auth (X-MCP-AUTH): ENABLED
+   {{- else }}
+   - HTTP auth (X-MCP-AUTH): DISABLED (set security.mcpAuthToken to require a token)
+   {{- end }}
    {{- end }}
 
 3. Verify deployment:

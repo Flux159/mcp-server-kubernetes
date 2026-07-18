@@ -153,6 +153,35 @@ helm install mcp-server-k8s ./helm-chart \
 
 ## Security Configuration
 
+### HTTP/SSE Transport Authentication (Recommended)
+
+This chart defaults to `transport.mode: "http"`, which exposes the MCP endpoint
+over the network. With no token configured, the server accepts **unauthenticated**
+requests from any client that can reach the Service and runs them against your
+cluster with the deployment's RBAC permissions.
+
+Whenever you run with `http` or `sse` transport, set `security.mcpAuthToken` to a
+high-entropy value. The chart stores it in a Secret and the server then requires
+every request to carry a matching `X-MCP-AUTH: <token>` header:
+
+```bash
+helm install mcp-server-k8s ./helm-chart \
+  --set security.mcpAuthToken=$(openssl rand -hex 32)
+```
+
+Or in a values file (keep the token out of source control — use `--set`, a
+sealed secret, or an external secrets manager):
+
+```yaml
+security:
+  mcpAuthToken: "your-high-entropy-token"
+```
+
+If you leave `security.mcpAuthToken` empty with `http`/`sse` transport, `helm
+install`/`upgrade` prints a warning, and you should instead front the server with
+your own authenticating proxy and restrict access with a NetworkPolicy (see
+below). The token has no effect in `stdio` mode.
+
 ### Non-Destructive Mode (Safe Operations Only)
 
 ```bash
@@ -370,6 +399,7 @@ helm schema validate ./helm-chart/values.yaml ./helm-chart/values.schema.json
 | `security.allowOnlyNonDestructive` | bool | `false` | Disable destructive operations (kubectl_delete, uninstall_helm_chart, cleanup, kubectl_generic) |
 | `security.allowOnlyReadonly` | bool | `false` | Enable read-only mode (kubectl_get, kubectl_describe, kubectl_logs, kubectl_context, explain_resource, list_api_resources, ping) |
 | `security.allowedTools` | string | `""` | Comma-separated list of specific tools to allow |
+| `security.mcpAuthToken` | string | `""` | Token required in the `X-MCP-AUTH` header for `http`/`sse` transports. Strongly recommended; stored in a Secret. Empty means the endpoint is unauthenticated. |
 
 ### Scaling and Resources
 

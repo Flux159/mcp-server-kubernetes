@@ -419,6 +419,16 @@ docker run --rm -it -p 3001:3001 \
   flux159/mcp-server-kubernetes:latest
 ```
 
+Or with the Helm chart (which defaults to `http` transport): set
+`security.mcpAuthToken` — the chart stores it in a Secret and wires it in as
+`MCP_AUTH_TOKEN`. If it is left empty with `http`/`sse` transport, the install
+prints a warning that the endpoint is unauthenticated.
+
+```shell
+helm install mcp-server-k8s ./helm-chart \
+  --set security.mcpAuthToken=$(openssl rand -hex 32)
+```
+
 #### Client Configuration
 
 **Codex CLI (toml):**
