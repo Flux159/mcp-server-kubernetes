@@ -199,7 +199,18 @@ security:
   # kubectl_generic, kubectl_context, install_helm_chart, upgrade_helm_chart,
   # uninstall_helm_chart, start_port_forward, stop_port_forward, exec_in_pod,
   # explain_resource, list_api_resources, ping, cleanup
-  
+
+  # HTTP/SSE transport authentication (X-MCP-AUTH header).
+  # STRONGLY RECOMMENDED whenever transport.mode is "http" or "sse": those modes
+  # expose the MCP endpoint over the network, and with no token set the server
+  # accepts unauthenticated requests from ANY client that can reach the Service
+  # and runs them against your cluster with this deployment's RBAC. Set a
+  # high-entropy token here; the chart stores it in a Secret and the server then
+  # requires clients to send a matching "X-MCP-AUTH: <token>" header. Leave empty
+  # only if you front the server with your own authenticating proxy. No effect in
+  # stdio mode.
+  mcpAuthToken: ""
+
   # Pod security context
   podSecurityContext:
     fsGroup: 1000

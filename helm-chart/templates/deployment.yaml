@@ -127,7 +127,14 @@ spec:
             - name: ALLOWED_TOOLS
               value: {{ .Values.security.allowedTools | quote }}
             {{- end }}
-            
+            {{- if .Values.security.mcpAuthToken }}
+            - name: MCP_AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "mcp-server-kubernetes.fullname" . }}-auth
+                  key: mcp-auth-token
+            {{- end }}
+
             # Kubeconfig configuration
             {{- if eq (include "mcp-server-kubernetes.needsKubeconfigVolume" .) "true" }}
             {{- $kubeconfigPath := include "mcp-server-kubernetes.kubeconfigEnv" . }}
