@@ -9,6 +9,7 @@ import {
   contextParameter,
   namespaceParameter,
 } from "../models/common-parameters.js";
+import { isRemoteTransport } from "../security/transport.js";
 
 export const kubectlDeleteSchema = {
   name: "kubectl_delete",
@@ -41,7 +42,8 @@ export const kubectlDeleteSchema = {
       },
       filename: {
         type: "string",
-        description: "Path to a YAML file to delete resources from (optional)",
+        description:
+          "Path to a YAML file to delete resources from (optional). The path is read on the machine running the MCP server, so it is rejected when the server runs over a remote (SSE/Streamable HTTP) transport; use 'manifest' to pass the file's contents instead.",
       },
       allNamespaces: {
         type: "boolean",
@@ -94,6 +96,19 @@ export async function kubectlDelete(
       throw new McpError(
         ErrorCode.InvalidRequest,
         "When using resourceType, either name or labelSelector must be provided"
+      );
+    }
+
+    // Reject server-side filesystem reads on remote transports. Over SSE /
+    // Streamable HTTP the path resolves on the MCP server host, not the
+    // client, so `filename` (-f) would let any client that can reach the
+    // endpoint read arbitrary server files (kubeconfig, service-account
+    // token, /proc/self/environ, etc.) via kubectl's parse errors. Clients
+    // on these transports must pass content inline via `manifest` instead.
+    if (isRemoteTransport() && input.filename) {
+      throw new McpError(
+        ErrorCode.InvalidRequest,
+        "The 'filename' parameter reads a file from the MCP server's filesystem and is disabled on remote (SSE/Streamable HTTP) transports. Pass the file contents via 'manifest' instead."
       );
     }
 

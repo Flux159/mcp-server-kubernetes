@@ -5,9 +5,11 @@
  * Supports local chart paths, remote repositories, and custom values.
  */
 
+import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import { execFileSyncSafe } from "../security/kubectl-flags.js";
 import { writeFileSync, unlinkSync } from "fs";
 import { dump } from "js-yaml";
+import { isRemoteTransport } from "../security/transport.js";
 import { getSpawnMaxBuffer } from "../config/max-buffer.js";
 import {
   contextParameter,
@@ -60,7 +62,8 @@ export const installHelmChartSchema = {
       },
       valuesFile: {
         type: "string",
-        description: "Path to values file (alternative to values object)",
+        description:
+          "Path to values file (alternative to values object). The path is read on the machine running the MCP server, so it is rejected when the server runs over a remote (SSE/Streamable HTTP) transport; use 'values' to pass the values inline instead.",
       },
       useTemplate: {
         type: "boolean",
@@ -116,7 +119,8 @@ export const upgradeHelmChartSchema = {
       },
       valuesFile: {
         type: "string",
-        description: "Path to values file (alternative to values object)",
+        description:
+          "Path to values file (alternative to values object). The path is read on the machine running the MCP server, so it is rejected when the server runs over a remote (SSE/Streamable HTTP) transport; use 'values' to pass the values inline instead.",
       },
     },
     required: ["name", "chart", "namespace"],
@@ -168,6 +172,21 @@ const executeCommand = (command: string, args: string[]): string => {
   }
 };
 
+// Reject server-side filesystem reads on remote transports. Over SSE /
+// Streamable HTTP the path resolves on the MCP server host, not the client,
+// so `valuesFile` (-f) would let any client that can reach the endpoint read
+// arbitrary server files (kubeconfig, service-account token,
+// /proc/self/environ, etc.) via helm's parse errors. Clients on these
+// transports must pass values inline via `values` instead.
+const rejectValuesFileOnRemoteTransport = (valuesFile?: string): void => {
+  if (valuesFile && isRemoteTransport()) {
+    throw new McpError(
+      ErrorCode.InvalidRequest,
+      "The 'valuesFile' parameter reads a file from the MCP server's filesystem and is disabled on remote (SSE/Streamable HTTP) transports. Pass the values inline via 'values' instead."
+    );
+  }
+};
+
 /**
  * Install a Helm chart using template mode (helm template + kubectl apply).
  * This mode bypasses authentication issues and kubeconfig API version mismatches.
@@ -203,17 +222,7 @@ async function installHelmChartTemplate(params: {
       steps.push(`Namespace ${params.namespace} already exists`);
     }
 
-    // Step 3: Prepare values
-    let valuesContent = "";
-    if (params.valuesFile) {
-      steps.push(`Using values file: ${params.valuesFile}`);
-      valuesContent = executeCommand("cat", [params.valuesFile]);
-    } else if (params.values) {
-      steps.push("Using provided values object");
-      valuesContent = dump(params.values);
-    }
-
-    // Step 4: Generate YAML using helm template
+    // Step 3: Generate YAML using helm template
     steps.push("Generating YAML using helm template");
     const templateArgs = [
       "template",
@@ -227,43 +236,40 @@ async function installHelmChartTemplate(params: {
       templateArgs.push("--repo", params.repo);
     }
 
-    if (valuesContent) {
-      const tempValuesFile = `/tmp/values-${Date.now()}.yaml`;
-      writeFileSync(tempValuesFile, valuesContent);
+    let tempValuesFile: string | null = null;
+    if (params.valuesFile) {
+      // Hand the path to helm directly rather than reading the file's
+      // contents into this process.
+      steps.push(`Using values file: ${params.valuesFile}`);
+      templateArgs.push("-f", params.valuesFile);
+    } else if (params.values) {
+      steps.push("Using provided values object");
+      tempValuesFile = `/tmp/values-${Date.now()}.yaml`;
+      writeFileSync(tempValuesFile, dump(params.values));
       templateArgs.push("-f", tempValuesFile);
+    }
 
-      const yamlOutput = executeCommand("helm", templateArgs);
-
+    let yamlOutput: string;
+    try {
+      yamlOutput = executeCommand("helm", templateArgs);
+    } finally {
       // Clean up temp file
-      unlinkSync(tempValuesFile);
-
-      // Step 5: Apply YAML using kubectl
-      steps.push("Applying YAML using kubectl");
-      const tempYamlFile = `/tmp/helm-template-${Date.now()}.yaml`;
-      writeFileSync(tempYamlFile, yamlOutput);
-
-      try {
-        executeCommand("kubectl", ["apply", "-f", tempYamlFile]);
-        steps.push("Helm chart installed successfully using template mode");
-      } finally {
-        // Clean up temp file
-        unlinkSync(tempYamlFile);
+      if (tempValuesFile) {
+        unlinkSync(tempValuesFile);
       }
-    } else {
-      const yamlOutput = executeCommand("helm", templateArgs);
+    }
 
-      // Step 5: Apply YAML using kubectl
-      steps.push("Applying YAML using kubectl");
-      const tempYamlFile = `/tmp/helm-template-${Date.now()}.yaml`;
-      writeFileSync(tempYamlFile, yamlOutput);
+    // Step 4: Apply YAML using kubectl
+    steps.push("Applying YAML using kubectl");
+    const tempYamlFile = `/tmp/helm-template-${Date.now()}.yaml`;
+    writeFileSync(tempYamlFile, yamlOutput);
 
-      try {
-        executeCommand("kubectl", ["apply", "-f", tempYamlFile]);
-        steps.push("Helm chart installed successfully using template mode");
-      } finally {
-        // Clean up temp file
-        unlinkSync(tempYamlFile);
-      }
+    try {
+      executeCommand("kubectl", ["apply", "-f", tempYamlFile]);
+      steps.push("Helm chart installed successfully using template mode");
+    } finally {
+      // Clean up temp file
+      unlinkSync(tempYamlFile);
     }
 
     return {
@@ -302,6 +308,8 @@ async function installHelmChartTemplate(params: {
 export async function installHelmChart(
   params: HelmInstallOperation
 ): Promise<{ content: { type: string; text: string }[] }> {
+  rejectValuesFileOnRemoteTransport(params.valuesFile);
+
   // Use template mode if requested
   if (params.useTemplate) {
     return installHelmChartTemplate(params);
@@ -383,6 +391,8 @@ export async function installHelmChart(
 export async function upgradeHelmChart(
   params: HelmUpgradeOperation
 ): Promise<{ content: { type: string; text: string }[] }> {
+  rejectValuesFileOnRemoteTransport(params.valuesFile);
+
   try {
     // Add repository if provided
     if (params.repo) {
