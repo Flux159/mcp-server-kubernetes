@@ -139,6 +139,30 @@ export async function execInPod(
       );
     }
 
+    // A non-zero exit code from the command inside the pod is a NORMAL outcome of
+    // running commands, not an internal tool error. Throwing here discards stdout
+    // entirely (execFileSync attaches it to the error object), which loses all
+    // partial output — e.g. a diagnostic command that prints 20 useful lines and
+    // then exits 1 previously returned only "command terminated with exit code 1".
+    // Return stdout + stderr + the exit code instead, so callers see everything
+    // the command produced. Genuine spawn/infra failures (kubectl missing, RBAC,
+    // connection refused) have no exit status and still throw below.
+    if (typeof error.status === "number") {
+      const stdout = (error.stdout ?? "").toString();
+      const stderr = (error.stderr ?? "").toString();
+      return {
+        content: [
+          {
+            type: "text",
+            text:
+              `Command exited with code ${error.status}\n` +
+              (stdout ? `--- stdout ---\n${stdout}\n` : "") +
+              (stderr ? `--- stderr ---\n${stderr}` : ""),
+          },
+        ],
+      };
+    }
+
     throw new McpError(
       ErrorCode.InternalError,
       `Failed to execute command in pod: ${error.stderr || error.message}`
