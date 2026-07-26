@@ -42,10 +42,41 @@ const DANGEROUS_FLAGS = new Set<string>([
   "as",
   "as-group",
   "as-uid",
+
+  // Writes to attacker-chosen filesystem paths
+  "profile-output",
+  "log-file",
+  "cache-dir",
 ]);
 
 const SHORT_ALIASES = new Set<string>([
   "s", // -s is an alias for --server
+]);
+
+// Short flags that consume a value. pflag stops parsing a shorthand cluster at
+// the first of these: everything after it inside the token is that flag's
+// value ("-ojsonpath={.items[0]}"), not more flags. Every other letter is a
+// boolean shorthand, which pflag parses and then keeps going past — so the
+// scan in shortFlagLetters() must keep going too.
+//
+// Comparison is case-sensitive, exactly like pflag: "-A" (--all-namespaces)
+// and "-a" are different flags.
+//
+// Only letters that take a value in *every* command that defines them belong
+// here. "-f" is deliberately absent: it is --filename for apply/delete but the
+// boolean --follow for logs, so pflag keeps parsing the cluster after it.
+// Leaving a letter out is always the safe direction — at worst an attached
+// value containing "s" is refused, and the split form ("-f /path") or the long
+// form ("--filename=/path") still works.
+const SHORT_VALUE_FLAGS = new Set<string>([
+  "c", // --container
+  "k", // --kustomize
+  "l", // --selector
+  "L", // --label-columns
+  "n", // --namespace
+  "o", // --output
+  "s", // --server (dangerous; listed so the scan stops after it as well)
+  "v", // --v (log level)
 ]);
 
 // helm exposes the same exfiltration surface as kubectl, but under "kube-"
@@ -84,20 +115,46 @@ function normalizeFlagName(raw: string): string {
   let name = raw.replace(/^-+/, "");
   const eq = name.indexOf("=");
   if (eq !== -1) name = name.slice(0, eq);
-  return name.toLowerCase();
+  // kubectl and helm install pflag's WordSepNormalizeFunc, which treats "_" as
+  // equivalent to "-" in long flag names: "--insecure_skip_tls_verify" and
+  // "--insecure-skip-tls-verify" are the same flag. Normalize the same way so
+  // both spellings compare equal against the sets above.
+  return name.toLowerCase().replace(/_/g, "-");
 }
 
-// Extract the short-flag letter from a single-dash token, or null if the token
-// is not a single-dash short flag. pflag lets a short flag carry its value
-// attached with no separator ("-shttp://x" == "--server http://x"), so the
-// letter that matters is always the first character after the dash; the rest of
-// the token is the attached value (or a boolean-flag cluster). Long "--" flags
-// never attach a value without "=", so normalizeFlagName already handles them.
-function shortFlagLetter(raw: string): string | null {
+// Return every letter pflag would parse as a flag out of a single-dash token,
+// in order, or null if the token is not a single-dash short flag.
+//
+// pflag walks a shorthand cluster letter by letter: a boolean shorthand is
+// consumed and parsing continues with the next letter, while a value-taking
+// shorthand swallows the remainder of the token as its value. "-Aowide" is
+// therefore "-A -o wide", not a single unknown flag, so every letter pflag
+// reaches has to be checked — not just the first one after the dash.
+//
+// Long "--" flags never attach a value without "=", so normalizeFlagName
+// already handles them.
+function shortFlagLetters(raw: string): string[] | null {
   if (!raw.startsWith("-") || raw.startsWith("--")) return null;
   const body = raw.slice(1);
   if (body.length === 0) return null;
-  return body[0].toLowerCase();
+
+  const letters: string[] = [];
+  for (let i = 0; i < body.length; i++) {
+    const letter = body[i];
+    letters.push(letter);
+    // "-o=json": the "=" and everything after it is the value.
+    if (body[i + 1] === "=") break;
+    // A value-taking shorthand consumes the rest of the token as its value,
+    // so no further letters are parsed as flags.
+    if (SHORT_VALUE_FLAGS.has(letter)) break;
+  }
+  return letters;
+}
+
+function hasDangerousShortFlag(raw: string): boolean {
+  const letters = shortFlagLetters(raw);
+  if (letters === null) return false;
+  return letters.some((letter) => SHORT_ALIASES.has(letter));
 }
 
 function isDangerousFlagName(rawName: string, fromArgs: boolean): boolean {
@@ -105,12 +162,11 @@ function isDangerousFlagName(rawName: string, fromArgs: boolean): boolean {
   if (DANGEROUS_FLAGS.has(name)) return true;
   // Short aliases (-s) are only meaningful when they appear as a CLI token,
   // not as a key in the `flags` object. Match both the bare/split forms
-  // (normalizeFlagName -> "s") and the attached form "-sURL" (whose first
-  // post-dash character is the flag pflag actually parses).
+  // (normalizeFlagName -> "s") and the attached/clustered forms ("-sURL",
+  // "-Ashttps://attacker"), where pflag parses the alias out of the cluster.
   if (fromArgs) {
     if (SHORT_ALIASES.has(name)) return true;
-    const short = shortFlagLetter(rawName);
-    if (short !== null && SHORT_ALIASES.has(short)) return true;
+    if (hasDangerousShortFlag(rawName)) return true;
   }
   return false;
 }
@@ -175,10 +231,10 @@ export function assertSafeArgv(args: readonly string[]): void {
     if (!tok.startsWith("-")) continue;
     const name = normalizeFlagName(tok);
     if (ARGV_DANGEROUS_FLAGS.has(name) || SHORT_ALIASES.has(name)) reject(tok);
-    // Attached short-flag form ("-sURL"): match the first post-dash character,
-    // which is the flag pflag parses regardless of the trailing value.
-    const short = shortFlagLetter(tok);
-    if (short !== null && SHORT_ALIASES.has(short)) reject(tok);
+    // Attached/clustered short-flag forms ("-sURL", "-Ashttps://attacker"):
+    // match every letter pflag would parse out of the cluster, not just the
+    // first one.
+    if (hasDangerousShortFlag(tok)) reject(tok);
   }
 }
 
