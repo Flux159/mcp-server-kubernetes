@@ -142,6 +142,57 @@ describe("assertNoDangerousFlags", () => {
       ).not.toThrow();
     });
 
+    test("rejects short-flag clusters that hide -s ('-Ashttp://...')", () => {
+      // pflag parses "-Ashttp://attacker" as "-A" (--all-namespaces, boolean)
+      // followed by "-s http://attacker" (--server).
+      expect(() =>
+        assertNoDangerousFlags(undefined, ["-Ashttp://attacker.example.com"])
+      ).toThrow(McpError);
+      expect(() =>
+        assertNoDangerousFlags(undefined, ["-Aws=https://attacker"])
+      ).toThrow(McpError);
+      // "-f" is --follow (boolean) for `kubectl logs`, so the cluster keeps
+      // parsing and "-s" lands on --server.
+      expect(() =>
+        assertNoDangerousFlags(undefined, ["-fshttp://attacker.example.com"])
+      ).toThrow(McpError);
+    });
+
+    test("rejects underscore spellings of dangerous long flags", () => {
+      // kubectl's pflag normalizer treats "_" as "-", so these reach the same
+      // flags as their kebab-case spellings.
+      for (const tok of [
+        "--insecure_skip_tls_verify=true",
+        "--client_key=/tmp/k.pem",
+        "--certificate_authority=/tmp/ca.pem",
+        "--tls_server_name=attacker",
+        "--as_group=system:masters",
+        "--as_uid=0",
+      ]) {
+        expect(() => assertNoDangerousFlags(undefined, [tok])).toThrow(McpError);
+      }
+    });
+
+    test("rejects underscore spellings in the flags object too", () => {
+      expect(() =>
+        assertNoDangerousFlags({ insecure_skip_tls_verify: "true" })
+      ).toThrow(McpError);
+    });
+
+    test("does not flag benign boolean clusters or attached values", () => {
+      expect(() =>
+        assertNoDangerousFlags(undefined, [
+          "-it", // exec: --stdin --tty
+          "-A", // --all-namespaces
+          "-ojsonpath={.items[*].metadata.name}", // 's' inside the value
+          "-nkube-system",
+          "-lapp=nginx",
+          "-o=custom-columns=NAME:.metadata.name",
+          "-v6",
+        ])
+      ).not.toThrow();
+    });
+
     test("non-flag positional args are not inspected", () => {
       // "server" as a positional resource name (e.g. `kubectl get server`)
       // must not match the --server flag denylist.
@@ -222,6 +273,26 @@ describe("kubectl_generic refuses dangerous flags before executing kubectl", () 
     ).rejects.toThrow(McpError);
   });
 
+  test("blocks a short-flag cluster hiding -s in args", async () => {
+    await expect(
+      kubectlGeneric(stubManager, {
+        command: "get",
+        resourceType: "pods",
+        args: ["-Ashttp://attacker.example.com"],
+      })
+    ).rejects.toThrow(McpError);
+  });
+
+  test("blocks underscore spelling of --insecure-skip-tls-verify", async () => {
+    await expect(
+      kubectlGeneric(stubManager, {
+        command: "get",
+        resourceType: "pods",
+        flags: { insecure_skip_tls_verify: "true" },
+      })
+    ).rejects.toThrow(McpError);
+  });
+
   test("error code is InvalidParams (not InternalError)", async () => {
     try {
       await kubectlGeneric(stubManager, {
@@ -273,6 +344,61 @@ describe("assertSafeArgv (full-argv guard for positional slots)", () => {
     expect(() =>
       assertSafeArgv(["get", "pods", "-s=https://attacker"])
     ).toThrow(McpError);
+  });
+
+  test("rejects short-flag clusters that hide -s in argv", () => {
+    // "-A" is a boolean shorthand, so pflag keeps parsing the cluster and
+    // reads the rest as "-s http://attacker" (--server).
+    expect(() =>
+      assertSafeArgv(["get", "pods", "-Ashttp://127.0.0.1:59999"])
+    ).toThrow(McpError);
+    expect(() =>
+      assertSafeArgv(["get", "pods", "-Rws=https://attacker.example.com"])
+    ).toThrow(McpError);
+  });
+
+  test("rejects underscore spellings of dangerous flags in argv", () => {
+    expect(() =>
+      assertSafeArgv(["get", "pods", "--insecure_skip_tls_verify=true"])
+    ).toThrow(McpError);
+    expect(() => assertSafeArgv(["get", "pods", "--as_group=system:masters"]))
+      .toThrow(McpError);
+    expect(() =>
+      assertSafeArgv(["upgrade", "rel", "chart", "--kube_apiserver=https://x"])
+    ).toThrow(McpError);
+  });
+
+  test("rejects the combined bypass payload from the report", () => {
+    expect(() =>
+      assertSafeArgv([
+        "get",
+        "pods",
+        "-Ashttps://attacker.example.com",
+        "--insecure_skip_tls_verify=true",
+      ])
+    ).toThrow(McpError);
+  });
+
+  test("rejects flags that write to attacker-chosen paths", () => {
+    expect(() =>
+      assertSafeArgv(["get", "pods", "--profile-output=/tmp/evil"])
+    ).toThrow(/profile-output/);
+    expect(() =>
+      assertSafeArgv(["get", "pods", "--cache_dir=/tmp/evil"])
+    ).toThrow(McpError);
+  });
+
+  test("allows benign short-flag clusters and attached values", () => {
+    expect(() =>
+      assertSafeArgv([
+        "exec",
+        "my-pod",
+        "-it",
+        "-cmy-sidecar",
+        "-ojsonpath={.status.podIPs}",
+        "-A",
+      ])
+    ).not.toThrow();
   });
 
   test("rejects helm credential/target flags (kube-* prefix)", () => {
