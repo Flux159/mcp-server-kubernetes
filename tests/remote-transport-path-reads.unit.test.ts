@@ -1,6 +1,7 @@
 import { expect, test, describe, beforeEach, afterEach } from "vitest";
 import { kubectlApply } from "../src/tools/kubectl-apply.js";
 import { kubectlDelete } from "../src/tools/kubectl-delete.js";
+import { kubectlPatch } from "../src/tools/kubectl-patch.js";
 import {
   installHelmChart,
   upgradeHelmChart,
@@ -58,6 +59,18 @@ describe("server-side path params are rejected on remote transports", () => {
           filename: "/etc/passwd",
         })
       ).rejects.toThrow(/'filename'.*disabled on remote/s);
+    });
+
+    test(`kubectl_patch rejects patchFile under ${envVar}`, async () => {
+      process.env[envVar] = "true";
+      await expect(
+        kubectlPatch(manager, {
+          resourceType: "configmaps",
+          name: "leak",
+          patchFile: "/etc/passwd",
+          dryRun: true,
+        })
+      ).rejects.toThrow(/'patchFile'.*disabled on remote/s);
     });
 
     test(`install_helm_chart rejects valuesFile under ${envVar}`, async () => {

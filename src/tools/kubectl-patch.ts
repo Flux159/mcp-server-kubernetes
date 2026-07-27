@@ -1,5 +1,6 @@
 import { KubernetesManager } from "../types.js";
 import { execFileSyncSafe } from "../security/kubectl-flags.js";
+import { isRemoteTransport } from "../security/transport.js";
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import * as fs from "fs";
 import * as path from "path";
@@ -44,7 +45,7 @@ export const kubectlPatchSchema = {
       patchFile: {
         type: "string",
         description:
-          "Path to a file containing the patch data (alternative to patchData)",
+          "Path to a file containing the patch data (alternative to patchData). The path is read on the machine running the MCP server, so it is rejected when the server runs over a remote (SSE/Streamable HTTP) transport; use 'patchData' to pass the patch contents instead.",
       },
       dryRun: dryRunParameter,
       context: contextParameter,
@@ -71,6 +72,21 @@ export async function kubectlPatch(
       throw new McpError(
         ErrorCode.InvalidRequest,
         "Either patchData or patchFile must be provided"
+      );
+    }
+
+    // Reject server-side filesystem reads on remote transports. Over SSE /
+    // Streamable HTTP the path resolves on the MCP server host, not the
+    // client, so `patchFile` (--patch-file) would let any client that can
+    // reach the endpoint read arbitrary server files (kubeconfig,
+    // service-account token, /proc/self/environ, etc.) via kubectl's parse
+    // errors, or merge their contents into a resource that is then readable
+    // through kubectl_get. Clients on these transports must pass the patch
+    // inline via `patchData` instead.
+    if (isRemoteTransport() && input.patchFile) {
+      throw new McpError(
+        ErrorCode.InvalidRequest,
+        "The 'patchFile' parameter reads a file from the MCP server's filesystem and is disabled on remote (SSE/Streamable HTTP) transports. Pass the patch contents via 'patchData' instead."
       );
     }
 
