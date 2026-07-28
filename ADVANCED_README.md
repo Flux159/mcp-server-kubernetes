@@ -157,6 +157,11 @@ You can specify a comma-separated list of tool names to enable only those specif
 ALLOWED_TOOLS="kubectl_get,kubectl_describe" npx mcp-server-kubernetes
 ```
 
+Every name in the list must match an existing tool. If any name is unknown, the
+server prints the offending names along with the available tools and exits
+without starting — a typo silently removing a tool you meant to allow would
+leave you with a narrower set of tools than you configured.
+
 In your Claude Desktop configuration:
 
 ```json

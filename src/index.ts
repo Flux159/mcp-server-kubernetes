@@ -169,6 +169,43 @@ const allTools = [
   pingSchema,
 ];
 
+/**
+ * Returns the names in `allowedToolNames` that no tool actually provides.
+ *
+ * Exported for testing.
+ */
+export function findUnknownToolNames(
+  allowedToolNames: Iterable<string>,
+  knownToolNames: Iterable<string>
+): string[] {
+  const known = new Set(knownToolNames);
+  return [...allowedToolNames].filter((name) => !known.has(name)).sort();
+}
+
+// A misspelled name in ALLOWED_TOOLS would otherwise be dropped silently,
+// leaving a narrower tool surface than was configured. Refuse to start instead.
+if (explicitlyAllowedToolNames) {
+  const unknownToolNames = findUnknownToolNames(
+    explicitlyAllowedToolNames,
+    allTools.map((tool) => tool.name)
+  );
+
+  if (unknownToolNames.length > 0) {
+    console.error(
+      `ALLOWED_TOOLS contains unknown tool ${
+        unknownToolNames.length === 1 ? "name" : "names"
+      }: ${unknownToolNames.join(", ")}`
+    );
+    console.error(
+      `Available tools: ${allTools
+        .map((tool) => tool.name)
+        .sort()
+        .join(", ")}`
+    );
+    process.exit(1);
+  }
+}
+
 const k8sManager = new KubernetesManager();
 
 const server = new Server(
