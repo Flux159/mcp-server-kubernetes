@@ -107,4 +107,25 @@ describe("tool restriction enforcement (tools/call layer)", () => {
       )
     ).rejects.toThrow(/not allowed/i);
   }, 30000);
+
+  test("ALLOWED_TOOLS lists exactly the named tools", async () => {
+    const c = await connectWithEnv({ ALLOWED_TOOLS: "kubectl_get,ping" });
+
+    const list = (await c.request(
+      { method: "tools/list", params: {} },
+      // @ts-ignore - minimal schema; we only inspect names
+      z.any()
+    )) as { tools: Array<{ name: string }> };
+
+    expect(list.tools.map((t) => t.name).sort()).toEqual([
+      "kubectl_get",
+      "ping",
+    ]);
+  }, 30000);
+
+  test("ALLOWED_TOOLS with an unknown name stops the server from starting", async () => {
+    await expect(
+      connectWithEnv({ ALLOWED_TOOLS: "kubectl_get,kubectl_gett" })
+    ).rejects.toThrow();
+  }, 30000);
 });
