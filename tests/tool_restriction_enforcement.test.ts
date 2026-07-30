@@ -128,4 +128,51 @@ describe("tool restriction enforcement (tools/call layer)", () => {
       connectWithEnv({ ALLOWED_TOOLS: "kubectl_get,kubectl_gett" })
     ).rejects.toThrow();
   }, 30000);
+
+  test("ALLOWED_TOOLS read-only+ adds named tools to the read-only set", async () => {
+    const c = await connectWithEnv({
+      ALLOWED_TOOLS: "read-only+kubectl_scale",
+    });
+
+    const list = (await c.request(
+      { method: "tools/list", params: {} },
+      // @ts-ignore - minimal schema; we only inspect names
+      z.any()
+    )) as { tools: Array<{ name: string }> };
+    const names = list.tools.map((t) => t.name);
+
+    // The named write tool plus the read-only baseline.
+    expect(names).toContain("kubectl_scale");
+    expect(names).toContain("kubectl_get");
+    expect(names).toContain("ping");
+    // Write tools that were not named stay out.
+    expect(names).not.toContain("kubectl_delete");
+    expect(names).not.toContain("kubectl_apply");
+  }, 30000);
+
+  test("ALLOWED_TOOLS read-only+ rejects an unnamed write tool at call-time", async () => {
+    const c = await connectWithEnv({
+      ALLOWED_TOOLS: "read-only+kubectl_scale",
+    });
+
+    await expect(
+      c.request(
+        {
+          method: "tools/call",
+          params: {
+            name: "kubectl_delete",
+            arguments: { resourceType: "pod", name: "anything" },
+          },
+        },
+        // @ts-ignore - minimal schema
+        z.any()
+      )
+    ).rejects.toThrow(/not allowed/i);
+  }, 30000);
+
+  test("ALLOWED_TOOLS read-only+ with an unknown name stops the server from starting", async () => {
+    await expect(
+      connectWithEnv({ ALLOWED_TOOLS: "read-only+kubectl_scalee" })
+    ).rejects.toThrow();
+  }, 30000);
 });

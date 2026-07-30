@@ -178,6 +178,32 @@ In your Claude Desktop configuration:
 }
 ```
 
+##### Read-Only Tools Plus a Few Named Ones
+
+A list that starts with `read-only+` is added to the [read-only tools](#read-only-mode) instead of replacing them. This is the common case of "let the agent look at everything, but only write through these specific tools" — without it, exposing one write tool means listing every read-only tool by hand and keeping that list in sync with new releases.
+
+```shell
+ALLOWED_TOOLS="read-only+kubectl_scale,kubectl_rollout" npx mcp-server-kubernetes
+```
+
+That exposes every read-only tool plus `kubectl_scale` and `kubectl_rollout`; every other write tool, `kubectl_delete` and `kubectl_generic` included, stays out of `tools/list` and is refused if called by name. `readonly+` is accepted as well, and the names after the prefix are validated exactly like a plain list, so a typo still stops the server instead of quietly dropping the tool.
+
+In your Claude Desktop configuration:
+
+```json
+{
+  "mcpServers": {
+    "kubernetes-readonly-plus-scaling": {
+      "command": "npx",
+      "args": ["mcp-server-kubernetes"],
+      "env": {
+        "ALLOWED_TOOLS": "read-only+kubectl_scale,kubectl_rollout"
+      }
+    }
+  }
+}
+```
+
 #### Read-Only Mode
 
 For the strictest level of safety, you can enable read-only mode. This mode only permits tools that cannot alter the cluster state.
@@ -192,6 +218,7 @@ The following tools are available in read-only mode:
 - `kubectl_describe`
 - `kubectl_logs`
 - `kubectl_context`
+- `kubectl_reconnect`
 - `explain_resource`
 - `list_api_resources`
 - `ping`

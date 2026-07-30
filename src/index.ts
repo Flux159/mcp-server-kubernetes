@@ -86,16 +86,64 @@ const allowedToolsEnv = process.env.ALLOWED_TOOLS;
 const nonDestructiveTools =
   process.env.ALLOW_ONLY_NON_DESTRUCTIVE_TOOLS === "true";
 
-const explicitlyAllowedToolNames = allowedToolsEnv
-  ? new Set(allowedToolsEnv.split(",").map((t) => t.trim()).filter(Boolean))
-  : null;
+// Prefixes that start an ALLOWED_TOOLS list from the read-only tool set
+// instead of from nothing. Both spellings of "read-only" are accepted.
+const READONLY_BASELINE_PREFIXES = ["read-only+", "readonly+"];
+
+export interface AllowedTools {
+  /** Tool names listed explicitly. */
+  names: Set<string>;
+  /** Whether every read-only tool is allowed on top of `names`. */
+  withReadonlyBaseline: boolean;
+}
+
+/**
+ * Parses an ALLOWED_TOOLS value.
+ *
+ * `kubectl_get,ping` allows exactly the named tools. `read-only+kubectl_scale`
+ * allows every read-only tool plus the named ones, so exposing one write tool
+ * does not require re-listing the whole read-only set by hand.
+ *
+ * Exported for testing.
+ */
+export function parseAllowedTools(
+  value: string | undefined
+): AllowedTools | null {
+  if (!value) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  const matchedPrefix = READONLY_BASELINE_PREFIXES.find((prefix) =>
+    trimmed.toLowerCase().startsWith(prefix)
+  );
+  const listed = matchedPrefix ? trimmed.slice(matchedPrefix.length) : trimmed;
+
+  return {
+    names: new Set(
+      listed
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean)
+    ),
+    withReadonlyBaseline: matchedPrefix !== undefined,
+  };
+}
+
+const allowedTools = parseAllowedTools(allowedToolsEnv);
+
+const isReadonlyTool = (name: string): boolean =>
+  readonlyTools.some((t) => t.name === name);
 
 const isToolAllowed = (name: string): boolean => {
-  if (explicitlyAllowedToolNames) {
-    return explicitlyAllowedToolNames.has(name);
+  if (allowedTools) {
+    if (allowedTools.names.has(name)) {
+      return true;
+    }
+    return allowedTools.withReadonlyBaseline && isReadonlyTool(name);
   }
   if (allowOnlyReadonlyTools) {
-    return readonlyTools.some((t) => t.name === name);
+    return isReadonlyTool(name);
   }
   if (nonDestructiveTools) {
     return !destructiveTools.some((dt) => dt.name === name);
@@ -184,9 +232,9 @@ export function findUnknownToolNames(
 
 // A misspelled name in ALLOWED_TOOLS would otherwise be dropped silently,
 // leaving a narrower tool surface than was configured. Refuse to start instead.
-if (explicitlyAllowedToolNames) {
+if (allowedTools) {
   const unknownToolNames = findUnknownToolNames(
-    explicitlyAllowedToolNames,
+    allowedTools.names,
     allTools.map((tool) => tool.name)
   );
 
@@ -238,8 +286,9 @@ registerPromptHandlers(server, k8sManager);
 
 // Tools handlers
 server.setRequestHandler(ListToolsRequestSchema, async () => {
-  const baseTools = allowOnlyReadonlyTools ? readonlyTools : allTools;
-  const tools = baseTools.filter((tool) => isToolAllowed(tool.name));
+  // isToolAllowed is the single source of truth, so tools/list and tools/call
+  // cannot disagree about which tools the current configuration exposes.
+  const tools = allTools.filter((tool) => isToolAllowed(tool.name));
   return { tools };
 });
 
