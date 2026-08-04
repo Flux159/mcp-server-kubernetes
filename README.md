@@ -1,5 +1,7 @@
 # MCP Server Kubernetes
 
+[![MCP Toplist](https://mcptoplist.com/badge/glama%2FFlux159%2Fmcp-server-kubernetes.svg)](https://mcptoplist.com/server/glama%2FFlux159%2Fmcp-server-kubernetes)
+
 [![CI](https://github.com/Flux159/mcp-server-kubernetes/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/mcp-server-kubernetes/actions/workflows/ci.yml)
 [![Language](https://img.shields.io/github/languages/top/Flux159/mcp-server-kubernetes)](https://github.com/yourusername/mcp-server-kubernetes)
 [![Kubernetes](https://img.shields.io/badge/kubernetes-%23326ce5.svg?style=flat&logo=kubernetes&logoColor=white)](https://kubernetes.io/)
