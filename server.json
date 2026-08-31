@@ -7,13 +7,13 @@
     "url": "https://github.com/Flux159/mcp-server-kubernetes",
     "source": "github"
   },
-  "version": "4.1.4",
+  "version": "4.1.6",
   "packages": [
     {
       "registry_type": "npm",
       "registry_base_url": "https://registry.npmjs.org",
       "identifier": "mcp-server-kubernetes",
-      "version": "4.1.4",
+      "version": "4.1.6",
       "transport": {
         "type": "stdio"
       },
