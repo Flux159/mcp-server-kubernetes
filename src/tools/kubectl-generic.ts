@@ -6,7 +6,10 @@ import {
   contextParameter,
   namespaceParameter,
 } from "../models/common-parameters.js";
-import { assertNoDangerousFlags } from "../security/kubectl-flags.js";
+import {
+  assertNoDangerousFlags,
+  assertNoRemoteFileReads,
+} from "../security/kubectl-flags.js";
 
 export const kubectlGenericSchema = {
   name: "kubectl_generic",
@@ -136,6 +139,14 @@ export async function kubectlGeneric(
     if (input.context) {
       cmdArgs.push("--context", input.context);
     }
+
+    // Reject server-side filesystem reads on remote transports. This tool
+    // hands the caller a free-form kubectl argv, so the per-parameter guards
+    // the structured tools use have nothing to attach to: "--from-file",
+    // "-f" and friends arrive as raw tokens. See GHSA-m67f-jxm9-cvx8 for the
+    // read primitive and src/security/kubectl-flags.ts for the flag list.
+    // No-op under stdio, where the files are the operator's own.
+    assertNoRemoteFileReads(cmdArgs);
 
     // Execute the command
     try {
