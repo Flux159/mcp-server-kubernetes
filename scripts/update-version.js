@@ -53,6 +53,15 @@ const files = [
       ext.version = version;
       return JSON.stringify(ext, null, 2) + '\n';
     }
+  },
+  {
+    path: 'server.json',
+    update: (content) => {
+      const server = JSON.parse(content);
+      server.version = version;
+      server.packages[0].version = version;
+      return JSON.stringify(server, null, 2) + '\n';
+    }
   }
 ];
 

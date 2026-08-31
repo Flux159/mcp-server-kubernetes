@@ -1,5 +1,5 @@
 {
-  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-07-09/server.schema.json",
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-10-17/server.schema.json",
   "name": "io.github.Flux159/mcp-server-kubernetes",
   "description": "MCP server for interacting with Kubernetes clusters via kubectl",
   "status": "active",
@@ -7,70 +7,160 @@
     "url": "https://github.com/Flux159/mcp-server-kubernetes",
     "source": "github"
   },
-  "version": "2.9.4",
+  "version": "4.1.4",
   "packages": [
     {
       "registry_type": "npm",
       "registry_base_url": "https://registry.npmjs.org",
       "identifier": "mcp-server-kubernetes",
-      "version": "2.9.4",
+      "version": "4.1.4",
       "transport": {
         "type": "stdio"
       },
       "environment_variables": [
         {
-          "description": "Non destructive mode.",
+          "name": "KUBECONFIG_YAML",
+          "description": "Kubeconfig supplied as a YAML string. Takes priority over KUBECONFIG_PATH.",
           "is_required": false,
-          "format": "string",
-          "name": "ALLOW_ONLY_NON_DESTRUCTIVE_TOOLS"
+          "format": "string"
         },
         {
-          "description": "Read only mode.",
+          "name": "KUBECONFIG_JSON",
+          "description": "Kubeconfig supplied as a JSON string. Takes priority over KUBECONFIG_PATH.",
           "is_required": false,
-          "format": "string",
-          "name": "ALLOW_ONLY_READONLY_TOOLS"
+          "format": "string"
         },
         {
-          "description": "Comma delimited list of allowed tools.",
+          "name": "KUBECONFIG_PATH",
+          "description": "Path to the kubeconfig file. Defaults to ~/.kube/config.",
           "is_required": false,
-          "format": "string",
-          "name": "ALLOWED_TOOLS"
+          "format": "string"
         },
         {
-          "description": "Set to false to disable automatic secrets masking in responses.",
+          "name": "ALLOW_ONLY_NON_DESTRUCTIVE_TOOLS",
+          "description": "Set to 'true' to expose only non-destructive tools (excludes kubectl_delete, exec_in_pod, node_management, and Helm uninstall).",
           "is_required": false,
-          "format": "string",
-          "name": "MASK_SECRETS"
+          "format": "string"
         },
         {
-          "description": "Enable Streamable HTTP Transport.",
+          "name": "ALLOW_ONLY_READONLY_TOOLS",
+          "description": "Set to 'true' to expose only read-only tools (get, describe, logs, explain, context listing).",
           "is_required": false,
-          "format": "string",
-          "name": "ENABLE_UNSAFE_STREAMABLE_HTTP_TRANSPORT"
+          "format": "string"
         },
         {
-          "description": "Enable SSE Transport.",
+          "name": "ALLOWED_TOOLS",
+          "description": "Comma-delimited allowlist of specific tool names to expose. All other tools are hidden.",
           "is_required": false,
-          "format": "string",
-          "name": "ENABLE_UNSAFE_SSE_TRANSPORT"
+          "format": "string"
         },
         {
-          "description": "Specify kubeconfig as a yaml string.",
+          "name": "MASK_SECRETS",
+          "description": "Set to 'false' to disable automatic masking of Kubernetes Secret values in responses. Masking is enabled by default.",
           "is_required": false,
-          "format": "string",
-          "name": "KUBECONFIG_YAML"
+          "format": "string"
         },
         {
-          "description": "Specify kubeconfig as a json string.",
+          "name": "ALLOW_KUBECTL_UNSAFE_FLAGS",
+          "description": "Set to 'true' to allow kubectl flags that redirect API connections (e.g. --server, --token, --kubeconfig). Disabled by default as a defence against prompt-injection attacks.",
           "is_required": false,
-          "format": "string",
-          "name": "KUBECONFIG_JSON"
+          "format": "string"
         },
         {
-          "description": "Specify kubeconfig file path. Defaults to ~/.kube/config",
+          "name": "ENABLE_UNSAFE_STREAMABLE_HTTP_TRANSPORT",
+          "description": "Set to '1' to enable the Streamable HTTP transport. Requires HOST and PORT. Pair with MCP_AUTH_TOKEN in production.",
           "is_required": false,
-          "format": "string",
-          "name": "KUBECONFIG_PATH"
+          "format": "string"
+        },
+        {
+          "name": "ENABLE_UNSAFE_SSE_TRANSPORT",
+          "description": "Set to '1' to enable the legacy SSE transport. Pair with MCP_AUTH_TOKEN in production.",
+          "is_required": false,
+          "format": "string"
+        },
+        {
+          "name": "HOST",
+          "description": "Bind address for the HTTP transport. Defaults to 'localhost'. Set to '0.0.0.0' only in isolated/containerised environments.",
+          "is_required": false,
+          "format": "string"
+        },
+        {
+          "name": "PORT",
+          "description": "Port for the HTTP transport. Defaults to 3000.",
+          "is_required": false,
+          "format": "string"
+        },
+        {
+          "name": "MCP_AUTH_TOKEN",
+          "description": "Shared-secret token for the HTTP transport. When set, every request must include the header 'X-MCP-AUTH: <token>'. Strongly recommended when HOST is not localhost.",
+          "is_required": false,
+          "format": "string"
+        },
+        {
+          "name": "DNS_REBINDING_PROTECTION",
+          "description": "Set to 'false' to disable DNS rebinding protection on the HTTP transport. Protection is enabled by default.",
+          "is_required": false,
+          "format": "string"
+        },
+        {
+          "name": "DNS_REBINDING_ALLOWED_HOST",
+          "description": "Override the allowed Host header value checked by DNS rebinding protection. Useful when the server is accessed through a reverse proxy.",
+          "is_required": false,
+          "format": "string"
+        },
+        {
+          "name": "SPAWN_MAX_BUFFER",
+          "description": "Maximum output buffer size in bytes for kubectl command execution. Defaults to 1048577 (1 MB + 1 byte).",
+          "is_required": false,
+          "format": "string"
+        },
+        {
+          "name": "ENABLE_TELEMETRY",
+          "description": "Set to 'true' or '1' to enable OpenTelemetry tracing. Also requires OTEL_EXPORTER_OTLP_ENDPOINT to be set.",
+          "is_required": false,
+          "format": "string"
+        },
+        {
+          "name": "OTEL_EXPORTER_OTLP_ENDPOINT",
+          "description": "OTLP endpoint URL for exporting traces (e.g. http://localhost:4318). Required when ENABLE_TELEMETRY is set.",
+          "is_required": false,
+          "format": "string"
+        },
+        {
+          "name": "OTEL_SERVICE_NAME",
+          "description": "Service name reported in OpenTelemetry traces.",
+          "is_required": false,
+          "format": "string"
+        },
+        {
+          "name": "OTEL_SERVICE_VERSION",
+          "description": "Service version reported in OpenTelemetry traces.",
+          "is_required": false,
+          "format": "string"
+        },
+        {
+          "name": "OTEL_RESOURCE_ATTRIBUTES",
+          "description": "Additional key=value resource attributes attached to every OpenTelemetry span.",
+          "is_required": false,
+          "format": "string"
+        },
+        {
+          "name": "OTEL_TRACES_SAMPLER",
+          "description": "OpenTelemetry trace sampler name (e.g. 'always_on', 'always_off', 'traceidratio').",
+          "is_required": false,
+          "format": "string"
+        },
+        {
+          "name": "OTEL_TRACES_SAMPLER_ARG",
+          "description": "Argument passed to the configured OTEL_TRACES_SAMPLER (e.g. a sampling ratio like '0.1').",
+          "is_required": false,
+          "format": "string"
+        },
+        {
+          "name": "OTEL_CAPTURE_RESPONSE_METADATA",
+          "description": "Set to 'false' or '0' to exclude tool response metadata from OpenTelemetry spans. Captured by default.",
+          "is_required": false,
+          "format": "string"
         }
       ]
     }
