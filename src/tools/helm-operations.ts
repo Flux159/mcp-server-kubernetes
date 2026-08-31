@@ -6,7 +6,10 @@
  */
 
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
-import { execFileSyncSafe } from "../security/kubectl-flags.js";
+import {
+  assertNotFlagLike,
+  execFileSyncSafe,
+} from "../security/kubectl-flags.js";
 import { writeFileSync, unlinkSync } from "fs";
 import { dump } from "js-yaml";
 import { isRemoteTransport } from "../security/transport.js";
@@ -187,6 +190,25 @@ const rejectValuesFileOnRemoteTransport = (valuesFile?: string): void => {
   }
 };
 
+// The release name, chart reference, namespace and repo URL are all placed in
+// positional argv slots ("helm install <name> <chart>", "helm repo add
+// <name> <url>", "kubectl create namespace <ns>"). pflag parses any token
+// beginning with "-" as a flag regardless of position, so a caller-supplied
+// value such as "--post-renderer=/tmp/x.sh" would become a helm flag instead
+// of an operand. Reject flag-shaped operands up front rather than relying on
+// the argv deny-list to know every dangerous helm flag.
+const assertOperandsNotFlagLike = (params: {
+  name: string;
+  chart?: string;
+  namespace: string;
+  repo?: string;
+}): void => {
+  assertNotFlagLike(params.name, "release name");
+  assertNotFlagLike(params.chart, "chart");
+  assertNotFlagLike(params.namespace, "namespace");
+  assertNotFlagLike(params.repo, "repo");
+};
+
 /**
  * Install a Helm chart using template mode (helm template + kubectl apply).
  * This mode bypasses authentication issues and kubeconfig API version mismatches.
@@ -309,6 +331,7 @@ export async function installHelmChart(
   params: HelmInstallOperation
 ): Promise<{ content: { type: string; text: string }[] }> {
   rejectValuesFileOnRemoteTransport(params.valuesFile);
+  assertOperandsNotFlagLike(params);
 
   // Use template mode if requested
   if (params.useTemplate) {
@@ -392,6 +415,7 @@ export async function upgradeHelmChart(
   params: HelmUpgradeOperation
 ): Promise<{ content: { type: string; text: string }[] }> {
   rejectValuesFileOnRemoteTransport(params.valuesFile);
+  assertOperandsNotFlagLike(params);
 
   try {
     // Add repository if provided
@@ -464,6 +488,8 @@ export async function upgradeHelmChart(
 export async function uninstallHelmChart(
   params: HelmUninstallOperation
 ): Promise<{ content: { type: string; text: string }[] }> {
+  assertOperandsNotFlagLike(params);
+
   try {
     executeCommand("helm", [
       "uninstall",

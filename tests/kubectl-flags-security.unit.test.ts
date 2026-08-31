@@ -2,6 +2,7 @@ import { expect, test, describe, beforeEach, afterEach } from "vitest";
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import {
   assertNoDangerousFlags,
+  assertNotFlagLike,
   assertSafeArgv,
   execFileSyncSafe,
 } from "../src/security/kubectl-flags.js";
@@ -410,6 +411,29 @@ describe("assertSafeArgv (full-argv guard for positional slots)", () => {
     ).toThrow(/kube-token/);
   });
 
+  test("rejects helm flags that run or overwrite things on the host", () => {
+    expect(() =>
+      assertSafeArgv([
+        "template",
+        "rel",
+        "chart",
+        "--post-renderer=/tmp/payload.sh",
+      ])
+    ).toThrow(/post-renderer/);
+    expect(() =>
+      assertSafeArgv(["install", "rel", "chart", "--post_renderer=/tmp/x.sh"])
+    ).toThrow(McpError);
+    expect(() =>
+      assertSafeArgv(["install", "rel", "chart", "--post-renderer-args=x"])
+    ).toThrow(/post-renderer-args/);
+    expect(() =>
+      assertSafeArgv(["repo", "add", "r", "--repository-config=/tmp/x.yaml"])
+    ).toThrow(/repository-config/);
+    expect(() =>
+      assertSafeArgv(["install", "rel", "chart", "--registry-config=/tmp/x"])
+    ).toThrow(/registry-config/);
+  });
+
   test("allows --context (every tool emits it; cannot redirect on its own)", () => {
     expect(() =>
       assertSafeArgv(["get", "pods", "--context", "prod", "-o", "json"])
@@ -437,6 +461,68 @@ describe("assertSafeArgv (full-argv guard for positional slots)", () => {
     process.env.ALLOW_KUBECTL_UNSAFE_FLAGS = "true";
     expect(() =>
       assertSafeArgv(["get", "pods", "--server=https://attacker"])
+    ).not.toThrow();
+  });
+});
+
+describe("assertNotFlagLike", () => {
+  const originalEnv = process.env.ALLOW_KUBECTL_UNSAFE_FLAGS;
+
+  beforeEach(() => {
+    delete process.env.ALLOW_KUBECTL_UNSAFE_FLAGS;
+  });
+
+  afterEach(() => {
+    if (originalEnv === undefined) {
+      delete process.env.ALLOW_KUBECTL_UNSAFE_FLAGS;
+    } else {
+      process.env.ALLOW_KUBECTL_UNSAFE_FLAGS = originalEnv;
+    }
+  });
+
+  test("rejects long-flag-shaped operands", () => {
+    expect(() =>
+      assertNotFlagLike("--post-renderer=/tmp/payload.sh", "release name")
+    ).toThrow(McpError);
+    // Unknown-to-the-deny-list flags are refused too: the guard keys off the
+    // shape of the value, not off a list of flag names.
+    expect(() => assertNotFlagLike("--some-future-flag=x", "chart")).toThrow(
+      /chart/
+    );
+  });
+
+  test("rejects short-flag-shaped operands and a bare dash", () => {
+    expect(() => assertNotFlagLike("-f/tmp/values.yaml", "chart")).toThrow(
+      McpError
+    );
+    expect(() => assertNotFlagLike("-", "release name")).toThrow(McpError);
+  });
+
+  test("error uses InvalidParams code", () => {
+    try {
+      assertNotFlagLike("--post-renderer=/tmp/x.sh", "release name");
+      throw new Error("should have thrown");
+    } catch (e) {
+      expect(e).toBeInstanceOf(McpError);
+      expect((e as McpError).code).toBe(ErrorCode.InvalidParams);
+    }
+  });
+
+  test("allows ordinary release names, charts, namespaces and repo URLs", () => {
+    expect(() => assertNotFlagLike("my-release", "release name")).not.toThrow();
+    expect(() => assertNotFlagLike("bitnami/nginx", "chart")).not.toThrow();
+    expect(() => assertNotFlagLike("./charts/mychart", "chart")).not.toThrow();
+    expect(() => assertNotFlagLike("default", "namespace")).not.toThrow();
+    expect(() =>
+      assertNotFlagLike("https://charts.bitnami.com/bitnami", "repo")
+    ).not.toThrow();
+    expect(() => assertNotFlagLike(undefined, "repo")).not.toThrow();
+  });
+
+  test("ALLOW_KUBECTL_UNSAFE_FLAGS=true bypasses the operand guard", () => {
+    process.env.ALLOW_KUBECTL_UNSAFE_FLAGS = "true";
+    expect(() =>
+      assertNotFlagLike("--post-renderer=/tmp/x.sh", "release name")
     ).not.toThrow();
   });
 });
