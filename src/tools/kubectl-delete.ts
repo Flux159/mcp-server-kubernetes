@@ -1,5 +1,8 @@
 import { KubernetesManager } from "../types.js";
-import { execFileSyncSafe } from "../security/kubectl-flags.js";
+import {
+  assertNotFlagLike,
+  execFileSyncSafe,
+} from "../security/kubectl-flags.js";
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import * as fs from "fs";
 import * as path from "path";
@@ -132,6 +135,12 @@ export async function kubectlDelete(
       args.push("-f", input.filename);
     } else {
       // Handle deleting by resource type and name/selector
+      // A resource type or name is an RFC 1123 name, never a flag. Refusing
+      // a leading "-" closes the positional injection slot itself rather than
+      // relying on the argv denylist to know every dangerous flag.
+      assertNotFlagLike(input.resourceType, "resourceType");
+      assertNotFlagLike(input.name, "name");
+
       args.push(input.resourceType!);
 
       if (input.name) {

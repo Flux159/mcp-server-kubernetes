@@ -1,5 +1,8 @@
 import { KubernetesManager } from "../types.js";
-import { execFileSyncSafe } from "../security/kubectl-flags.js";
+import {
+  assertNotFlagLike,
+  execFileSyncSafe,
+} from "../security/kubectl-flags.js";
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import { getSpawnMaxBuffer } from "../config/max-buffer.js";
 import { contextParameter, namespaceParameter } from "../models/common-parameters.js";
@@ -45,6 +48,12 @@ export async function kubectlScale(
   }
 ) {
   try {
+    // A resource type or name is an RFC 1123 name, never a flag. Refusing a
+    // leading "-" closes the positional injection slot itself rather than
+    // relying on the argv denylist to know every dangerous flag.
+    assertNotFlagLike(input.resourceType, "resourceType");
+    assertNotFlagLike(input.name, "name");
+
     const namespace = input.namespace || "default";
     const resourceType = input.resourceType || "deployment";
     const context = input.context || "";

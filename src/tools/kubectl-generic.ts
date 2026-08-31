@@ -9,6 +9,7 @@ import {
 import {
   assertNoDangerousFlags,
   assertNoRemoteFileReads,
+  assertNotFlagLike,
 } from "../security/kubectl-flags.js";
 
 export const kubectlGenericSchema = {
@@ -85,6 +86,14 @@ export async function kubectlGeneric(
     // command. See src/security/kubectl-flags.ts for the rationale.
     assertNoDangerousFlags(input.flags, input.args);
 
+    // The verb and the resource operands are never flags — only the free-form
+    // `args` array is. Refusing a leading "-" in the operand slots closes the
+    // positional injection point without narrowing what `args` can express.
+    assertNotFlagLike(input.command, "command");
+    assertNotFlagLike(input.subCommand, "subCommand");
+    assertNotFlagLike(input.resourceType, "resourceType");
+    assertNotFlagLike(input.name, "name");
+
     // Start building the kubectl command
     const command = "kubectl";
     const cmdArgs: string[] = [input.command];
@@ -140,11 +149,11 @@ export async function kubectlGeneric(
       cmdArgs.push("--context", input.context);
     }
 
-    // Reject server-side filesystem reads on remote transports. This tool
-    // hands the caller a free-form kubectl argv, so the per-parameter guards
-    // the structured tools use have nothing to attach to: "--from-file",
-    // "-f" and friends arrive as raw tokens. See GHSA-m67f-jxm9-cvx8 for the
-    // read primitive and src/security/kubectl-flags.ts for the flag list.
+    // Reject server-side filesystem reads on remote transports, matching the
+    // per-parameter guards in the structured tools. This tool hands the caller
+    // a free-form kubectl argv, so there is no parameter to attach them to:
+    // "--from-file", "-f" and friends arrive as raw tokens and have to be
+    // matched in the argv. See src/security/transport.ts for the trust model.
     // No-op under stdio, where the files are the operator's own.
     assertNoRemoteFileReads(cmdArgs);
 

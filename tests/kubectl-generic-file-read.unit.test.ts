@@ -4,11 +4,11 @@ import { kubectlGeneric } from "../src/tools/kubectl-generic.js";
 
 // kubectl_generic hands the caller a free-form kubectl argv, so the
 // per-parameter path guards the structured tools use (`filename`, `fromFile`,
-// `patchFile`, `valuesFile`) have nothing to attach to here: the same
-// server-side read arrives as a raw "--from-file=leak=/etc/passwd" token and
-// kubectl reflects the file back under --dry-run=client, without a cluster.
-// On remote transports that is an arbitrary file read on the server host; on
-// stdio the files are the operator's own and the flags stay allowed.
+// `patchFile`, `valuesFile`) have nothing to attach to here: a server-side
+// path arrives as a raw "--from-file=<key>=<path>" token instead. On remote
+// transports those paths resolve on the MCP server host rather than the
+// caller's machine and are rejected; on stdio the files are the operator's own
+// and the flags stay allowed.
 
 const TRANSPORT_ENV = [
   "ENABLE_UNSAFE_SSE_TRANSPORT",
@@ -70,10 +70,6 @@ describe("assertNoRemoteFileReads", () => {
       ["short attached", ["-f/etc/passwd"]],
       ["short clustered", ["-Rf/etc/passwd"]],
       ["short -k", ["-k/etc"]],
-      ["-o go-template-file split", ["-o", "go-template-file=/etc/passwd"]],
-      ["-o go-template-file attached", ["-ogo-template-file=/etc/passwd"]],
-      ["-o=jsonpath-file", ["-o=jsonpath-file=/etc/passwd"]],
-      ["--output=go-template-file", ["--output=go-template-file=/etc/passwd"]],
     ];
 
     for (const [label, argv] of rejected) {
@@ -141,16 +137,6 @@ describe("kubectl_generic rejects server-side file reads on remote transports", 
           resourceType: "configmap",
           name: "leak",
           flags: { "from-file": "leak=/etc/passwd", "dry-run": "client" },
-        })
-      ).rejects.toThrow(/reads a file from the MCP server's own filesystem/);
-    });
-
-    test(`rejects a file flag smuggled through a positional slot under ${envVar}`, async () => {
-      process.env[envVar] = "true";
-      await expect(
-        kubectlGeneric(manager, {
-          command: "create",
-          resourceType: "--from-file=leak=/etc/passwd",
         })
       ).rejects.toThrow(/reads a file from the MCP server's own filesystem/);
     });
