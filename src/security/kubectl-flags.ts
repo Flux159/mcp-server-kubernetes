@@ -3,6 +3,7 @@ import {
   execFileSync,
   type ExecFileSyncOptionsWithStringEncoding,
 } from "child_process";
+import { isRemoteTransport } from "./transport.js";
 
 // Flags that would let a caller redirect kubectl to a different API server,
 // substitute credentials, or impersonate another identity. Allowing any of
@@ -118,6 +119,45 @@ const ARGV_DANGEROUS_FLAGS = new Set<string>(
     (name) => name !== "context"
   )
 );
+
+// Flags that make kubectl read a file from the machine it is running on.
+//
+// These are not in DANGEROUS_FLAGS: under stdio that machine is the operator's
+// own, and "-f manifest.yaml" is the whole point of the tool. They only become
+// a vulnerability on a remote (SSE / Streamable HTTP) transport, where the path
+// is chosen by a client but resolved on the server host — so they are rejected
+// by transport, in assertNoRemoteFileReads, rather than denied outright.
+//
+// Long names only; the single-dash spellings live in FILE_READ_SHORT_FLAGS.
+const FILE_READ_FLAGS = new Set<string>([
+  "filename",
+  "from-file",
+  "from-env-file",
+  "kustomize",
+  "patch-file",
+]);
+
+// Single-letter spellings of the above. Unlike SHORT_ALIASES these are checked
+// against every letter pflag would parse out of a shorthand cluster, so the
+// attached ("-f/etc/passwd") and clustered ("-Rf/etc/passwd") forms are caught
+// alongside the split one ("-f", "/etc/passwd").
+const FILE_READ_SHORT_FLAGS = new Set<string>([
+  "f", // --filename
+  "k", // --kustomize
+]);
+
+// Output formats whose argument is a file path on the machine kubectl runs on:
+// "-o go-template-file=<path>" makes kubectl read that file and render it into
+// the result. That is the same read as --from-file under a different flag
+// name, but unlike --from-file no tool here ever legitimately emits one — so
+// assertSafeArgv refuses them in any argv, on any transport, rather than only
+// where a server-side path would be attacker-chosen. Every tool has positional
+// slots, read-only ones included, so a name-shaped denial is not enough.
+const FILE_READ_OUTPUT_FORMATS = new Set<string>([
+  "go-template-file",
+  "jsonpath-file",
+  "custom-columns-file",
+]);
 
 function isUnsafeFlagsAllowed(): boolean {
   return process.env.ALLOW_KUBECTL_UNSAFE_FLAGS === "true";
@@ -239,7 +279,8 @@ export function assertNoDangerousFlags(
 export function assertSafeArgv(args: readonly string[]): void {
   if (isUnsafeFlagsAllowed()) return;
 
-  for (const tok of args) {
+  for (let i = 0; i < args.length; i++) {
+    const tok = args[i];
     if (typeof tok !== "string") continue;
     if (!tok.startsWith("-")) continue;
     const name = normalizeFlagName(tok);
@@ -248,22 +289,125 @@ export function assertSafeArgv(args: readonly string[]): void {
     // match every letter pflag would parse out of the cluster, not just the
     // first one.
     if (hasDangerousShortFlag(tok)) reject(tok);
+    // A file read hiding in the *value* of an otherwise ordinary flag
+    // ("-o go-template-file=<path>"), so it has to be matched on the value
+    // rather than on the flag name.
+    const format = outputFormatValue(tok, args[i + 1]);
+    if (
+      format !== undefined &&
+      FILE_READ_OUTPUT_FORMATS.has(format.split("=")[0])
+    ) {
+      rejectOutputFileRead(tok, format);
+    }
+  }
+}
+
+/**
+ * Return the value kubectl would take for -o / --output in `tok`, or undefined
+ * if `tok` is not an output flag. The value may be attached to the token
+ * ("-ojson", "-o=json", "--output=json") or sit in the following one, which is
+ * why the caller passes `next`.
+ */
+function outputFormatValue(
+  tok: string,
+  next: string | undefined
+): string | undefined {
+  if (tok.startsWith("--")) {
+    if (normalizeFlagName(tok) !== "output") return undefined;
+    const eq = tok.indexOf("=");
+    return eq === -1 ? next : tok.slice(eq + 1);
+  }
+
+  const letters = shortFlagLetters(tok);
+  if (letters === null) return undefined;
+  const idx = letters.indexOf("o");
+  if (idx === -1) return undefined;
+
+  // "o" takes a value, so pflag stops the cluster there and reads the rest of
+  // the token as the format ("-Aojson" -> "-A -o json"). An empty remainder
+  // means the format is the next argv token instead.
+  let rest = tok.slice(1 + idx + 1);
+  if (rest.startsWith("=")) rest = rest.slice(1);
+  return rest === "" ? next : rest;
+}
+
+function rejectOutputFileRead(tok: string, format: string): never {
+  throw new McpError(
+    ErrorCode.InvalidParams,
+    `Refusing to run kubectl with "${tok} ${format}": this output format ` +
+      `takes a file path and makes kubectl read that file from the MCP ` +
+      `server's own filesystem, rendering it into the result. No tool needs ` +
+      `it, and a resource name or type that parses as this flag is an ` +
+      `injection attempt. Use an inline template ("-o go-template=...") or a ` +
+      `jsonpath expression instead.`
+  );
+}
+
+function rejectFileRead(flag: string): never {
+  throw new McpError(
+    ErrorCode.InvalidParams,
+    `Refusing to run kubectl with "${flag}": this flag reads a file from the ` +
+      `MCP server's own filesystem, which is disabled on remote (SSE/` +
+      `Streamable HTTP) transports because the path is chosen by the client ` +
+      `but resolved on the server host. Pass the file contents inline ` +
+      `instead (kubectl_apply/kubectl_create "manifest", kubectl_create ` +
+      `"fromFileContent", or install_helm_chart "values").`
+  );
+}
+
+/**
+ * Reject flags that make kubectl read a file from the MCP server's filesystem,
+ * on remote transports only. No-op under stdio.
+ *
+ * kubectl_generic lets a caller assemble an arbitrary kubectl argv, so the
+ * per-parameter guards the structured tools use (`filename`, `fromFile`,
+ * `patchFile`, `valuesFile`) have nothing to attach to: the same read is
+ * reachable as a raw "--from-file=leak=/etc/passwd" token. Under stdio that is
+ * the operator reading their own files and stays allowed; over SSE/Streamable
+ * HTTP the path comes from whoever can reach the endpoint but resolves on the
+ * server host, turning kubectl into an arbitrary file-read oracle (kubeconfig,
+ * service-account token, /proc/self/environ) — with --dry-run=client, without
+ * even a cluster.
+ *
+ * Takes a fully-constructed argv rather than the `flags`/`args` inputs so that
+ * flags built from the object form and file-shaped values smuggled through
+ * positional slots (resourceType, name) are covered by the same scan. Unlike
+ * assertNoDangerousFlags there is no ALLOW_KUBECTL_UNSAFE_FLAGS escape hatch:
+ * this mirrors the transport guards in the structured tools, which reject
+ * server-side paths unconditionally.
+ */
+export function assertNoRemoteFileReads(args: readonly string[]): void {
+  if (!isRemoteTransport()) return;
+
+  for (let i = 0; i < args.length; i++) {
+    const tok = args[i];
+    if (typeof tok !== "string" || !tok.startsWith("-")) continue;
+
+    if (FILE_READ_FLAGS.has(normalizeFlagName(tok))) rejectFileRead(tok);
+
+    // Short spellings, including the attached and clustered forms pflag
+    // accepts: "-f/etc/passwd", "-Rf/etc/passwd".
+    const letters = shortFlagLetters(tok);
+    if (letters?.some((letter) => FILE_READ_SHORT_FLAGS.has(letter))) {
+      rejectFileRead(tok);
+    }
   }
 }
 
 /**
  * Reject a caller-supplied value that a tool is about to place in a *positional*
- * argv slot (a release name, a chart reference, a namespace) when it is shaped
- * like a command-line flag.
+ * argv slot (a resource type, a resource name, a release name, a chart
+ * reference, a namespace) when it is shaped like a command-line flag.
  *
  * assertSafeArgv is a deny-list: it can only refuse the flags it knows about,
  * so every dangerous flag added upstream is exploitable through any positional
  * slot until the list is extended. This guard closes the injection point
  * instead of chasing the flags: pflag treats any token starting with "-" as a
  * flag no matter where it sits, and none of these operands is ever legitimately
- * flag-shaped (helm release names and namespaces are RFC 1123 names; chart
- * references are repo/name pairs, paths or URLs). Refusing a leading "-" here
- * means caller data can never occupy a slot where it would be parsed as a flag.
+ * flag-shaped (Kubernetes resource types and names, helm release names and
+ * namespaces are RFC 1123 names; chart references are repo/name pairs, paths
+ * or URLs). Refusing a leading "-" here means caller data can never occupy a
+ * slot where it would be parsed as a flag.
  *
  * Honours the same ALLOW_KUBECTL_UNSAFE_FLAGS escape hatch as the flag guard.
  */
@@ -276,10 +420,10 @@ export function assertNotFlagLike(
 
   throw new McpError(
     ErrorCode.InvalidParams,
-    `Refusing to run helm with ${field}="${value}": a value starting with ` +
-      `"-" is parsed as a command-line flag rather than as the ${field}, ` +
-      `which would let the caller inject arbitrary helm flags. Provide a ` +
-      `${field} that does not begin with "-".`
+    `Refusing to run kubectl/helm with ${field}="${value}": a value ` +
+      `starting with "-" is parsed as a command-line flag rather than as ` +
+      `the ${field}, which would let the caller inject arbitrary flags. ` +
+      `Provide a ${field} that does not begin with "-".`
   );
 }
 
