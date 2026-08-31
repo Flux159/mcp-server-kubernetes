@@ -80,7 +80,8 @@ const SHORT_VALUE_FLAGS = new Set<string>([
 ]);
 
 // helm exposes the same exfiltration surface as kubectl, but under "kube-"
-// prefixed flag names (e.g. --kube-apiserver instead of --server). We add
+// prefixed flag names (e.g. --kube-apiserver instead of --server), plus a few
+// helm-only flags that run or overwrite things on the MCP server host. We add
 // those here so the argv-level guard covers helm invocations too. Context
 // selection flags (--context / --kube-context) are intentionally omitted:
 // they can only select a cluster already present in the loaded kubeconfig,
@@ -94,6 +95,18 @@ const HELM_DANGEROUS_FLAGS = new Set<string>([
   "kube-as-group",
   "kube-tls-server-name",
   "kube-insecure-skip-tls-verify",
+
+  // Runs a binary on the MCP server host: helm 3.x resolves --post-renderer to
+  // an executable path (or a $PATH name) and runs it over the rendered
+  // manifests. Nothing about installing a chart otherwise gives host-side
+  // execution, so this is never a flag a tool should emit.
+  "post-renderer",
+  "post-renderer-args",
+
+  // Writes to attacker-chosen filesystem paths: helm rewrites these files as
+  // part of "repo add" / registry login.
+  "repository-config",
+  "registry-config",
 ]);
 
 // Flag names that are dangerous when they appear anywhere in a fully
@@ -175,10 +188,10 @@ function reject(flag: string): never {
   throw new McpError(
     ErrorCode.InvalidParams,
     `Refusing to run kubectl with flag "${flag}": this flag can redirect ` +
-      `kubectl to a different API server or substitute credentials, which ` +
-      `would allow exfiltration of the operator's bearer token. If you ` +
-      `genuinely need this flag, set ALLOW_KUBECTL_UNSAFE_FLAGS=true in the ` +
-      `server environment.`
+      `kubectl/helm to a different API server, substitute credentials, or ` +
+      `act on the MCP server's own host, which would allow exfiltration of ` +
+      `the operator's bearer token. If you genuinely need this flag, set ` +
+      `ALLOW_KUBECTL_UNSAFE_FLAGS=true in the server environment.`
   );
 }
 
@@ -236,6 +249,38 @@ export function assertSafeArgv(args: readonly string[]): void {
     // first one.
     if (hasDangerousShortFlag(tok)) reject(tok);
   }
+}
+
+/**
+ * Reject a caller-supplied value that a tool is about to place in a *positional*
+ * argv slot (a release name, a chart reference, a namespace) when it is shaped
+ * like a command-line flag.
+ *
+ * assertSafeArgv is a deny-list: it can only refuse the flags it knows about,
+ * so every dangerous flag added upstream is exploitable through any positional
+ * slot until the list is extended. This guard closes the injection point
+ * instead of chasing the flags: pflag treats any token starting with "-" as a
+ * flag no matter where it sits, and none of these operands is ever legitimately
+ * flag-shaped (helm release names and namespaces are RFC 1123 names; chart
+ * references are repo/name pairs, paths or URLs). Refusing a leading "-" here
+ * means caller data can never occupy a slot where it would be parsed as a flag.
+ *
+ * Honours the same ALLOW_KUBECTL_UNSAFE_FLAGS escape hatch as the flag guard.
+ */
+export function assertNotFlagLike(
+  value: string | undefined,
+  field: string
+): void {
+  if (isUnsafeFlagsAllowed()) return;
+  if (typeof value !== "string" || !value.startsWith("-")) return;
+
+  throw new McpError(
+    ErrorCode.InvalidParams,
+    `Refusing to run helm with ${field}="${value}": a value starting with ` +
+      `"-" is parsed as a command-line flag rather than as the ${field}, ` +
+      `which would let the caller inject arbitrary helm flags. Provide a ` +
+      `${field} that does not begin with "-".`
+  );
 }
 
 /**
