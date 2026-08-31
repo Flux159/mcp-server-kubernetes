@@ -178,6 +178,28 @@ export const kubectlCreateSchema = {
   },
 } as const;
 
+function resolveAllowedFromFile(file: string): string {
+  const allowedRoot = process.env.MCP_SERVER_ALLOWED_FILE_ROOT;
+  if (!allowedRoot) {
+    throw new McpError(
+      ErrorCode.InvalidParams,
+      "fromFile is disabled unless MCP_SERVER_ALLOWED_FILE_ROOT is configured"
+    );
+  }
+  const eq = file.indexOf("=");
+  const prefix = eq === -1 ? "" : file.slice(0, eq + 1);
+  const rawPath = eq === -1 ? file : file.slice(eq + 1);
+  const root = path.resolve(allowedRoot);
+  const resolved = path.resolve(rawPath);
+  if (resolved !== root && !resolved.startsWith(root + path.sep)) {
+    throw new McpError(
+      ErrorCode.InvalidParams,
+      "fromFile path is outside the allowed root"
+    );
+  }
+  return `${prefix}${resolved}`;
+}
+
 export async function kubectlCreate(
   k8sManager: KubernetesManager,
   input: {
@@ -338,10 +360,10 @@ export async function kubectlCreate(
           }
 
           // Add --from-file arguments (server-side paths; blocked on remote
-          // transports by the guard above)
+          // transports by the guard above, and path-validated here)
           if (input.fromFile && input.fromFile.length > 0) {
             input.fromFile.forEach((file) => {
-              args.push(`--from-file=${file}`);
+              args.push(`--from-file=${resolveAllowedFromFile(file)}`);
             });
           }
 
@@ -369,10 +391,10 @@ export async function kubectlCreate(
           }
 
           // Add --from-file arguments (server-side paths; blocked on remote
-          // transports by the guard above)
+          // transports by the guard above, and path-validated here)
           if (input.fromFile && input.fromFile.length > 0) {
             input.fromFile.forEach((file) => {
-              args.push(`--from-file=${file}`);
+              args.push(`--from-file=${resolveAllowedFromFile(file)}`);
             });
           }
 
