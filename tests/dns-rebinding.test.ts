@@ -203,3 +203,101 @@ describe("DNS Rebinding Protection - warning on 0.0.0.0 without protection", () 
     }
   });
 });
+
+// An all-interfaces bind is a bind directive, not a hostname any client
+// resolves. Accepting it as a Host header would let any caller that can reach
+// the port satisfy the allowlist by sending "Host: 0.0.0.0:<port>" — a value
+// that is public knowledge rather than a property of the deployment.
+describe("DNS Rebinding Protection - HOST bound to all interfaces", () => {
+  let httpServer: http.Server;
+  let port: number;
+  let savedEnv: Record<string, string | undefined>;
+
+  beforeAll(async () => {
+    savedEnv = saveEnvKeys(ENV_KEYS);
+    port = await findAvailablePort(5300);
+    process.env.PORT = port.toString();
+    process.env.HOST = "0.0.0.0";
+    // Protection left at its default (enabled)
+
+    const server = new Server(
+      { name: "test-dns-all-interfaces", version: "1.0.0" },
+      { capabilities: { tools: {} } }
+    );
+    server.setRequestHandler(ListToolsRequestSchema, async () => {
+      return { tools: [pingSchema] };
+    });
+    httpServer = startStreamableHTTPServer(server);
+    await waitForListening(httpServer);
+  });
+
+  afterAll(async () => {
+    await new Promise<void>((resolve, reject) => {
+      httpServer.close((err) => (err ? reject(err) : resolve()));
+    });
+    restoreEnvKeys(savedEnv);
+  });
+
+  test("should reject a request whose Host header is the bind address", async () => {
+    const res = await mcpPost(port, makeListToolsRequest(4), `0.0.0.0:${port}`);
+    expect(res.status).toBe(403);
+  });
+
+  test("should still reject a foreign Host header", async () => {
+    const res = await mcpPost(port, makeListToolsRequest(5), "evil.attacker.com");
+    expect(res.status).toBe(403);
+  });
+
+  test("should still allow localhost callers (port-forward, local curl)", async () => {
+    const res = await mcpPost(port, makeListToolsRequest(6), `127.0.0.1:${port}`);
+    expect(res.status).toBe(200);
+  });
+});
+
+describe("DNS Rebinding Protection - all-interfaces bind advises the escape hatch", () => {
+  let savedEnv: Record<string, string | undefined>;
+
+  beforeAll(async () => {
+    savedEnv = saveEnvKeys(ENV_KEYS);
+  });
+
+  afterAll(async () => {
+    restoreEnvKeys(savedEnv);
+  });
+
+  test("names DNS_REBINDING_ALLOWED_HOST when bound to 0.0.0.0 with protection on", async () => {
+    const port = await findAvailablePort(5400);
+    process.env.PORT = port.toString();
+    process.env.HOST = "0.0.0.0";
+
+    const originalWarn = console.warn;
+    const warnings: string[] = [];
+    console.warn = (...args: any[]) => {
+      warnings.push(args.join(" "));
+    };
+
+    let hs: http.Server | undefined;
+    try {
+      const server = new Server(
+        { name: "test-dns-hint", version: "1.0.0" },
+        { capabilities: { tools: {} } }
+      );
+      server.setRequestHandler(ListToolsRequestSchema, async () => {
+        return { tools: [pingSchema] };
+      });
+      hs = startStreamableHTTPServer(server);
+      await waitForListening(hs);
+
+      expect(
+        warnings.some((w) => w.includes("DNS_REBINDING_ALLOWED_HOST"))
+      ).toBe(true);
+    } finally {
+      console.warn = originalWarn;
+      if (hs) {
+        await new Promise<void>((resolve, reject) => {
+          hs!.close((err) => (err ? reject(err) : resolve()));
+        });
+      }
+    }
+  });
+});

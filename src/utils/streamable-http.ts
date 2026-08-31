@@ -3,37 +3,10 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import http from "http";
 import { createAuthMiddleware, isAuthEnabled } from "./auth.js";
-
-/**
- * Build the default allowedHosts list for DNS rebinding protection.
- * Includes localhost variants with and without port.
- */
-function buildDefaultAllowedHosts(host: string, port: number): string[] {
-  // Always allow the bare host and host:port for common localhost addresses
-  const localhostAliases = ["127.0.0.1", "localhost", "::1"];
-  const hosts: string[] = [];
-  for (const alias of localhostAliases) {
-    hosts.push(alias);
-    // HTTP Host header uses bracket notation for IPv6: [::1]:3000
-    if (alias.includes(":")) {
-      hosts.push(`[${alias}]`);
-      hosts.push(`[${alias}]:${port}`);
-    } else {
-      hosts.push(`${alias}:${port}`);
-    }
-  }
-  // Also add the configured host if it's not already covered
-  if (!localhostAliases.includes(host)) {
-    hosts.push(host);
-    if (host.includes(":") && !host.startsWith("[")) {
-      hosts.push(`[${host}]`);
-      hosts.push(`[${host}]:${port}`);
-    } else {
-      hosts.push(`${host}:${port}`);
-    }
-  }
-  return hosts;
-}
+import {
+  buildDefaultAllowedHosts,
+  isAllInterfacesHost,
+} from "./allowed-hosts.js";
 
 export function startStreamableHTTPServer(server: Server): http.Server {
   const app = express();
@@ -56,12 +29,29 @@ export function startStreamableHTTPServer(server: Server): http.Server {
     : buildDefaultAllowedHosts(host, port);
 
   // Warn when binding to all interfaces with DNS rebinding protection disabled
-  if (!enableDnsRebindingProtection && (host === "0.0.0.0" || host === "::")) {
+  if (!enableDnsRebindingProtection && isAllInterfacesHost(host)) {
     console.warn(
       "WARNING: DNS rebinding protection is disabled while HOST is set to " +
         `'${host}'. This exposes the MCP server to DNS rebinding attacks ` +
         "from any browser on the network. Set DNS_REBINDING_PROTECTION=true " +
         "(the default) or restrict HOST to 'localhost' / '127.0.0.1'."
+    );
+  }
+
+  // Binding to all interfaces makes the server reachable off-host, but the
+  // default allowlist only covers localhost: a client reaching it under any
+  // other name gets a 403 until the operator names that hostname explicitly.
+  if (
+    enableDnsRebindingProtection &&
+    isAllInterfacesHost(host) &&
+    !process.env.DNS_REBINDING_ALLOWED_HOST
+  ) {
+    console.warn(
+      `NOTE: HOST is set to '${host}' (all interfaces) and DNS rebinding ` +
+        "protection is enabled, so only requests with a localhost Host header " +
+        "are accepted. Clients reaching this server under another hostname " +
+        "(a Kubernetes Service name, an ingress host) must be allowed by " +
+        "setting DNS_REBINDING_ALLOWED_HOST to that hostname."
     );
   }
 
@@ -153,9 +143,14 @@ export function startStreamableHTTPServer(server: Server): http.Server {
     }
   });
 
+  // An all-interfaces bind is not a hostname a client can use: with DNS
+  // rebinding protection on it is not in the allowlist either, so advertise a
+  // localhost URL that actually works rather than 'http://0.0.0.0:<port>'.
+  const advertisedHost = isAllInterfacesHost(host) ? "localhost" : host;
+
   const httpServer = app.listen(port, host, () => {
     console.log(
-      `mcp-kubernetes-server is listening on port ${port}\nUse the following url to connect to the server:\nhttp://${host}:${port}/mcp`
+      `mcp-kubernetes-server is listening on port ${port}\nUse the following url to connect to the server:\nhttp://${advertisedHost}:${port}/mcp`
     );
     if (isAuthEnabled()) {
       console.log(

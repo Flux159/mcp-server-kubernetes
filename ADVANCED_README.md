@@ -301,7 +301,9 @@ DNS rebinding protection is **enabled by default** to prevent malicious web page
 - `127.0.0.1`, `127.0.0.1:<PORT>`
 - `localhost`, `localhost:<PORT>`
 - `::1`, `[::1]:<PORT>`
-- The configured `HOST` value (and `HOST:PORT`) when it differs from the above
+- The configured `HOST` value (and `HOST:PORT`) when it differs from the above and names a specific interface
+
+All-interfaces bind addresses (`0.0.0.0`, `::`) are **not** added to the allowlist: they are bind directives rather than hostnames a client resolves, so accepting one as a `Host` header would let any caller that can reach the port satisfy the allowlist. When you bind to all interfaces, name the hostname clients actually use via `DNS_REBINDING_ALLOWED_HOST` (see below); the server prints a startup note reminding you. Localhost callers — including `kubectl port-forward` — keep working with no extra configuration.
 
 Local usage requires no extra flags:
 
@@ -334,6 +336,10 @@ DNS_REBINDING_PROTECTION=false ENABLE_UNSAFE_STREAMABLE_HTTP_TRANSPORT=1 PORT=30
 ```
 
 The server prints a startup warning when protection is disabled while binding to `0.0.0.0` or `::`, since that combination is the most common foot-gun.
+
+##### Deploying with the Helm chart
+
+The Helm chart's `http` / `sse` transport modes bind the pod to all interfaces, so in-cluster clients reach the server under its Service hostname. Set `DNS_REBINDING_ALLOWED_HOST` to that hostname (e.g. `<release>-mcp-server-kubernetes.<namespace>.svc.cluster.local:<port>`, matching what your clients send) and set `security.mcpAuthToken` so requests are authenticated — the `Host` check is not an authentication mechanism.
 
 ### SSE Transport (Deprecated in favor of Streamable HTTP)
 
