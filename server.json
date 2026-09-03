@@ -119,7 +119,7 @@
           "name": "ENABLE_TELEMETRY",
           "description": "Set to 'true' or '1' to enable OpenTelemetry tracing. Also requires OTEL_EXPORTER_OTLP_ENDPOINT to be set.",
           "isRequired": false,
-          "format": "boolean"
+          "format": "string"
         },
         {
           "name": "OTEL_EXPORTER_OTLP_ENDPOINT",
@@ -161,7 +161,7 @@
           "name": "OTEL_CAPTURE_RESPONSE_METADATA",
           "description": "Set to 'false' or '0' to exclude tool response metadata from OpenTelemetry spans. Captured by default.",
           "isRequired": false,
-          "format": "boolean"
+          "format": "string"
         }
       ]
     }
