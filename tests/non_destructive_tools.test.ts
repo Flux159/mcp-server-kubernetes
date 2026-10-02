@@ -70,3 +70,28 @@ describe("ALLOW_ONLY_NON_DESTRUCTIVE_TOOLS flag", () => {
     process.env.ALLOW_ONLY_NON_DESTRUCTIVE_TOOLS = originalEnv;
   });
 });
+describe("ALLOW_ONLY_NON_DESTRUCTIVE_TOOLS exec_in_pod", () => {
+  test("exec_in_pod is classified as destructive", () => {
+    expect(destructiveTools.map((t) => t.name)).toContain("exec_in_pod");
+  });
+
+  test("destructive tools that remain allowed are an explicit, documented list", () => {
+    // README "Commands Available in Non-Destructive Mode" documents these as
+    // creation/update operations. Any new destructiveHint tool not listed here
+    // must either be added to destructiveTools or to this list deliberately.
+    const documentedMutating = new Set([
+      "kubectl_apply",
+      "kubectl_scale",
+      "kubectl_patch",
+      "kubectl_rollout",
+      "install_helm_chart",
+      "upgrade_helm_chart",
+    ]);
+    const blocked = new Set(destructiveTools.map((t) => t.name));
+    const unclassified = allTools
+      .filter((t: any) => t.annotations?.destructiveHint === true)
+      .map((t) => t.name)
+      .filter((n) => !blocked.has(n) && !documentedMutating.has(n));
+    expect(unclassified).toEqual([]);
+  });
+});

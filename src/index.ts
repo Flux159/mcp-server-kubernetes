@@ -123,6 +123,7 @@ const destructiveTools = [
   kubectlGenericSchema, // Generic kubectl command can perform destructive operations
 
   nodeManagementSchema, // Node management can drain nodes (destructive)
+  execInPodSchema, // Arbitrary command execution inside a pod; can read SA tokens and mutate state
 ];
 
 // Get all available tools

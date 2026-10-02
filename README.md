@@ -351,6 +351,7 @@ The following destructive operations are disabled:
 - `cleanup_pods`: Cleaning up problematic pods
 - `node_management`: Node management operations (can drain nodes)
 - `kubectl_generic`: General kubectl command access (may include destructive operations)
+- `exec_in_pod`: Arbitrary command execution inside a pod (can read service-account tokens and change state)
 
 For additional advanced features, see the [ADVANCED_README.md](ADVANCED_README.md) and also the [docs](https://github.com/Flux159/mcp-server-kubernetes/tree/main/docs) folder for specific information on `helm_install`, `helm_template_apply`, node management & pod cleanup.
 
