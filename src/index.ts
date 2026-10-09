@@ -62,6 +62,11 @@ import {
   kubectlDescribe,
   kubectlDescribeSchema,
 } from "./tools/kubectl-describe.js";
+import {
+  kubectlTop,
+  kubectlTopSchema,
+  type KubectlTopInput,
+} from "./tools/kubectl-top.js";
 import { kubectlApply, kubectlApplySchema } from "./tools/kubectl-apply.js";
 import { kubectlDelete, kubectlDeleteSchema } from "./tools/kubectl-delete.js";
 import { kubectlCreate, kubectlCreateSchema } from "./tools/kubectl-create.js";
@@ -108,6 +113,7 @@ const readonlyTools = [
   kubectlGetSchema,
   kubectlDescribeSchema,
   kubectlLogsSchema,
+  kubectlTopSchema,
   kubectlContextSchema,
   kubectlReconnectSchema,
   explainResourceSchema,
@@ -137,6 +143,7 @@ const allTools = [
   kubectlDeleteSchema,
   kubectlCreateSchema,
   kubectlLogsSchema,
+  kubectlTopSchema,
   kubectlScaleSchema,
   kubectlPatchSchema,
   kubectlRolloutSchema,
@@ -306,6 +313,10 @@ server.setRequestHandler(
             context?: string;
           }
         );
+      }
+
+      if (name === "kubectl_top") {
+        return await kubectlTop(k8sManager, input as KubectlTopInput);
       }
 
       if (name === "kubectl_apply") {

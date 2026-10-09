@@ -191,6 +191,7 @@ The following tools are available in read-only mode:
 - `kubectl_get`
 - `kubectl_describe`
 - `kubectl_logs`
+- `kubectl_top`
 - `kubectl_context`
 - `explain_resource`
 - `list_api_resources`
