@@ -1,0 +1,19 @@
+# MCP Server Kubernetes
+
+> An MCP server that connects to Kubernetes clusters and manages them through kubectl and Helm tools, with optional OpenTelemetry observability.
+
+Written in TypeScript and run via Node.js with npx. Requires kubectl in PATH, a valid kubeconfig, and optionally Helm v3; connects using the current kubectl context. Provides tools for getting, creating, applying, deleting, scaling, and patching resources, viewing logs, managing contexts, port forwarding, Helm chart operations, pod cleanup, and node management, plus a k8s-diagnose troubleshooting prompt. Supports non-destructive read-only mode, secrets masking, and opt-in OpenTelemetry tracing; advanced authentication options are documented in ADVANCED_README.md and observability in docs/OBSERVABILITY.md.
+
+## Docs
+
+- [MCP Server Kubernetes](https://raw.githubusercontent.com/Flux159/mcp-server-kubernetes/main/README.md): MCP server for managing Kubernetes clusters, with prerequisites and setup for Claude Code, Codex, and Claude Desktop.
+- [Advanced README for mcp-server-kubernetes](https://raw.githubusercontent.com/Flux159/mcp-server-kubernetes/main/ADVANCED_README.md): Authentication options in priority order, environment variables like KUBECONFIG_YAML and K8S_TOKEN, and large cluster buffer settings.
+- [Helm Install Tool](https://raw.githubusercontent.com/Flux159/mcp-server-kubernetes/main/docs/helm-install.md): Parameters and usage examples for the install_helm_chart tool, including template mode and values configuration.
+- [Helm template apply](https://raw.githubusercontent.com/Flux159/mcp-server-kubernetes/main/docs/helm-template-apply.md): The helm_template_apply tool for installing charts via helm template and kubectl apply, bypassing authentication issues.
+- [Node Management Tool](https://raw.githubusercontent.com/Flux159/mcp-server-kubernetes/main/docs/node-management.md): The node_management tool for cordon, drain, uncordon, and list operations with safety controls and parameters.
+- [Observability with OpenTelemetry](https://raw.githubusercontent.com/Flux159/mcp-server-kubernetes/main/docs/OBSERVABILITY.md): OpenTelemetry distributed tracing setup, configuration, captured telemetry, backends, and production best practices.
+- [Pod cleanup](https://raw.githubusercontent.com/Flux159/mcp-server-kubernetes/main/docs/pod-cleanup.md): Cleaning up failed, completed, and not-ready pods with kubectl_get and kubectl_delete field selectors, plus safety features.
+
+## Optional
+
+- [Contributing](https://raw.githubusercontent.com/Flux159/mcp-server-kubernetes/main/CONTRIBUTING.md): Contribution workflow from fork to pull request, testing requirements, and a DeepWiki link for architecture overview.
