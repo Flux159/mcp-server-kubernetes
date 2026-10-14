@@ -77,18 +77,15 @@ To manually install, you can also get the .mcpb by going to the latest [Release]
 
 [![Install Kubernetes MCP in VS Code](https://img.shields.io/badge/Install%20Kubernetes%20MCP%20in%20VS%20Code-blue?logo=visualstudiocode)](vscode:mcp/install?%7B%22name%22%3A%20%22kubernetes%22%2C%20%22type%22%3A%20%22stdio%22%2C%20%22command%22%3A%20%22npx%22%2C%20%22args%22%3A%20%5B%22mcp-server-kubernetes%22%5D%7D)
 
-For VS Code integration, you can use the MCP server with extensions that support the Model Context Protocol:
-
-1. Install a compatible MCP extension (such as Claude Dev or similar MCP clients)
-2. Configure the extension to use this server:
+VS Code has built-in MCP support. Use the one-click install button above, or add the server to `.vscode/mcp.json` in your workspace (or to your user `mcp.json` via **MCP: Open User Configuration**):
 
 ```json
 {
-  "mcpServers": {
+  "servers": {
     "kubernetes": {
+      "type": "stdio",
       "command": "npx",
-      "args": ["mcp-server-kubernetes"],
-      "description": "Kubernetes cluster management and operations"
+      "args": ["mcp-server-kubernetes"]
     }
   }
 }
@@ -96,7 +93,7 @@ For VS Code integration, you can use the MCP server with extensions that support
 
 ### Cursor
 
-Cursor supports MCP servers through its AI integration. Add the server to your Cursor MCP configuration:
+Cursor supports MCP servers through its AI integration. Add the server to `~/.cursor/mcp.json` (global) or `.cursor/mcp.json` (project):
 
 ```json
 {
@@ -110,6 +107,48 @@ Cursor supports MCP servers through its AI integration. Add the server to your C
 ```
 
 The server will automatically connect to your current kubectl context. You can verify the connection by asking the AI assistant to list your pods or create a test deployment.
+
+### Muse Code
+
+[Muse Code](https://dev.meta.ai/docs/muse-code/extending#mcp) reads MCP servers from the `mcp_servers` block of `~/.config/muse/settings.json`. The file must include `"schema_version": 1`:
+
+```json
+{
+  "schema_version": 1,
+  "mcp_servers": {
+    "kubernetes": {
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["mcp-server-kubernetes"]
+    }
+  }
+}
+```
+
+To connect over Streamable HTTP instead, first start the server in HTTP mode (it serves `/mcp` on port `3000` by default; see [Streamable HTTP Transport](ADVANCED_README.md#streamable-http-transport)):
+
+```bash
+ENABLE_UNSAFE_STREAMABLE_HTTP_TRANSPORT=1 npx mcp-server-kubernetes
+```
+
+Then point Muse Code at that endpoint with the `streamable_http` transport (`headers` is optional):
+
+```json
+{
+  "schema_version": 1,
+  "mcp_servers": {
+    "kubernetes": {
+      "transport": "streamable_http",
+      "url": "http://localhost:3000/mcp",
+      "mode": "optional"
+    }
+  }
+}
+```
+
+`"mode": "optional"` lets Muse Code start with a warning if the HTTP server isn't running, instead of aborting.
+
+Start a new Muse Code session after editing the file, then run `/mcp` to confirm the `kubernetes` server and its tools are connected.
 
 ## Usage with mcp-chat
 
