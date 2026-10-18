@@ -397,7 +397,7 @@ helm schema validate ./helm-chart/values.yaml ./helm-chart/values.schema.json
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `security.allowOnlyNonDestructive` | bool | `false` | Disable destructive operations (kubectl_delete, uninstall_helm_chart, cleanup, kubectl_generic) |
-| `security.allowOnlyReadonly` | bool | `false` | Enable read-only mode (kubectl_get, kubectl_describe, kubectl_logs, kubectl_context, explain_resource, list_api_resources, ping) |
+| `security.allowOnlyReadonly` | bool | `false` | Enable read-only mode (kubectl_get, kubectl_describe, kubectl_logs, kubectl_top, kubectl_context, explain_resource, list_api_resources, ping) |
 | `security.allowedTools` | string | `""` | Comma-separated list of specific tools to allow |
 | `security.mcpAuthToken` | string | `""` | Token required in the `X-MCP-AUTH` header for `http`/`sse` transports. Strongly recommended; stored in a Secret. Empty means the endpoint is unauthenticated. |
 

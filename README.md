@@ -183,6 +183,7 @@ npx mcp-chat --config "%APPDATA%\Claude\claude_desktop_config.json"
   - Apply YAML manifests with `kubectl_apply`
   - Delete resources with `kubectl_delete`
   - Get logs with `kubectl_logs`
+  - Show live node/pod CPU and memory usage with `kubectl_top`
   - Manage kubectl contexts with `kubectl_context`
   - Explain Kubernetes resources with `explain_resource`
   - List API resources with `list_api_resources`
@@ -374,7 +375,7 @@ For Claude Desktop configuration with non-destructive mode:
 
 All read-only and resource creation/update operations remain available:
 
-- Resource Information: `kubectl_get`, `kubectl_describe`, `kubectl_logs`, `explain_resource`, `list_api_resources`
+- Resource Information: `kubectl_get`, `kubectl_describe`, `kubectl_logs`, `kubectl_top`, `explain_resource`, `list_api_resources`
 - Resource Creation/Modification: `kubectl_apply`, `kubectl_create`, `kubectl_scale`, `kubectl_patch`, `kubectl_rollout`
 - Helm Operations: `install_helm_chart`, `upgrade_helm_chart`, `helm_template_apply`, `helm_template_uninstall`
 - Connectivity: `port_forward`, `stop_port_forward`
