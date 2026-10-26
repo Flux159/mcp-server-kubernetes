@@ -427,6 +427,128 @@ export function assertNotFlagLike(
   );
 }
 
+// kubectl verbs kubectl_generic refuses on every transport. Each one either
+// hands back or rewrites the operator's own credentials, or never returns:
+// execFileSync blocks the event loop, so a call that does not exit stalls the
+// server for every client until the child is killed. The structured tools
+// cover the legitimate uses (kubectl_context, port_forward).
+const GENERIC_DENIED_VERBS = new Map<string, string>([
+  [
+    "config",
+    "it prints and rewrites the operator's kubeconfig (\"config view --raw\" " +
+      "returns the credentials, \"config set\" repoints a cluster at another " +
+      "server). Use the kubectl_context tool for context operations",
+  ],
+  [
+    "proxy",
+    "it serves the Kubernetes API with the operator's credentials on a " +
+      "local port and never exits",
+  ],
+  [
+    "port-forward",
+    "it never exits. Use the port_forward tool, which runs it in the " +
+      "background",
+  ],
+  ["attach", "it is interactive and never exits"],
+  ["edit", "it opens an interactive editor on the MCP server host"],
+]);
+
+// kubectl verbs whose positional operands are paths on the machine kubectl
+// runs on. Like FILE_READ_FLAGS they are only a problem on a remote transport,
+// where that machine is the server host rather than the caller's — but the
+// path is a positional operand, which assertNoRemoteFileReads cannot see.
+const GENERIC_REMOTE_DENIED_VERBS = new Set<string>(["cp", "kustomize"]);
+
+// kubectl subcommand names, including plugin names ("kubectl foo" runs
+// kubectl-foo). Anything else is not a verb: kubectl skips an empty first
+// argument and takes the next token as the verb instead, so an empty
+// `command` would let the real verb ride in through a later slot unchecked.
+const VERB_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
+
+function rejectVerb(verb: string, reason: string): never {
+  throw new McpError(
+    ErrorCode.InvalidParams,
+    `Refusing to run "kubectl ${verb}" through kubectl_generic: ${reason}.`
+  );
+}
+
+/**
+ * Apply kubectl_generic's verb policy to a fully-constructed argv, whose first
+ * token is the verb.
+ *
+ * The flag guards above can only see dash-prefixed tokens, but some kubectl
+ * verbs reach the same assets through plain operands: "config view --raw"
+ * prints the operator's credentials, "config set clusters.x.server <url>"
+ * persistently redirects the kubeconfig, "cp" reads and writes local paths
+ * given as positionals. Those are matched on the verb instead.
+ *
+ * kubectl cp resolves any operand without a ":" on the local machine. Under
+ * stdio a local *source* is the operator reading their own file, the same as
+ * "-f", and stays allowed; a local *destination* is a write to a path chosen
+ * by whoever steers the tool arguments, like --log-file, and is refused. Over
+ * a remote transport both sides would be the server host, so cp is refused
+ * outright.
+ *
+ * The remote-only checks have no escape hatch, matching
+ * assertNoRemoteFileReads; the rest honour ALLOW_KUBECTL_UNSAFE_FLAGS.
+ */
+export function assertAllowedGenericCommand(args: readonly string[]): void {
+  const verb = args[0];
+  if (typeof verb !== "string" || !VERB_PATTERN.test(verb)) {
+    throw new McpError(
+      ErrorCode.InvalidParams,
+      `Refusing to run kubectl_generic with command="${verb}": the command ` +
+        `must be a kubectl subcommand name such as "get" or "rollout".`
+    );
+  }
+
+  if (isRemoteTransport() && GENERIC_REMOTE_DENIED_VERBS.has(verb)) {
+    rejectVerb(
+      verb,
+      "its operands are paths on the MCP server's own filesystem, which is " +
+        "disabled on remote (SSE/Streamable HTTP) transports because the " +
+        "path is chosen by the client but resolved on the server host"
+    );
+  }
+
+  if (isUnsafeFlagsAllowed()) return;
+
+  const reason = GENERIC_DENIED_VERBS.get(verb);
+  if (reason !== undefined) rejectVerb(verb, reason);
+
+  if (verb === "cp") {
+    const destinations = cpOperands(args).slice(1);
+    const local = destinations.find((operand) => !operand.includes(":"));
+    if (local !== undefined) {
+      rejectVerb(
+        verb,
+        `"${local}" would be written to the MCP server's own filesystem. ` +
+          `kubectl_generic only copies into a pod ("<pod>:<path>"); ` +
+          `copying out of one would let the caller overwrite any file the ` +
+          `server user can write`
+      );
+    }
+  }
+}
+
+// The operands of a "kubectl cp" argv, in order. Every token that does not
+// start with "-" counts, including the values of split flags ("-c main"):
+// telling those apart would need kubectl's flag table, and treating a value as
+// an operand can only refuse a call, never let one through. After "--" every
+// token is an operand.
+function cpOperands(args: readonly string[]): string[] {
+  const operands: string[] = [];
+  let afterSeparator = false;
+  for (const tok of args.slice(1)) {
+    if (!afterSeparator && tok === "--") {
+      afterSeparator = true;
+      continue;
+    }
+    if (afterSeparator || !tok.startsWith("-")) operands.push(tok);
+  }
+  return operands;
+}
+
 /**
  * Drop-in replacement for child_process.execFileSync that scans the argv for
  * credential/target-redirecting flags before executing. Tool files import this

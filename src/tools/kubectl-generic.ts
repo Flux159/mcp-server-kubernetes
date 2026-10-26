@@ -7,6 +7,7 @@ import {
   namespaceParameter,
 } from "../models/common-parameters.js";
 import {
+  assertAllowedGenericCommand,
   assertNoDangerousFlags,
   assertNoRemoteFileReads,
   assertNotFlagLike,
@@ -156,6 +157,11 @@ export async function kubectlGeneric(
     // matched in the argv. See src/security/transport.ts for the trust model.
     // No-op under stdio, where the files are the operator's own.
     assertNoRemoteFileReads(cmdArgs);
+
+    // Some verbs reach the operator's credentials or the server's filesystem
+    // through plain operands ("config view --raw", "config set ...server",
+    // "cp <path> ..."), which none of the flag scans above can see.
+    assertAllowedGenericCommand(cmdArgs);
 
     // Execute the command
     try {
