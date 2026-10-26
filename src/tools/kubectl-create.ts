@@ -8,6 +8,28 @@ import { getSpawnMaxBuffer } from "../config/max-buffer.js";
 import { contextParameter, namespaceParameter, dryRunParameter } from "../models/common-parameters.js";
 import { isRemoteTransport } from "../security/transport.js";
 
+// Valid ConfigMap / Secret data keys, as Kubernetes validates them.
+const DATA_KEY_PATTERN = /^[-._a-zA-Z0-9]{1,253}$/;
+
+// Output formats kubectl renders without reading anything from disk. The
+// template formats carry their template inline ("jsonpath={.metadata.name}").
+const INLINE_OUTPUT_FORMATS = new Set<string>([
+  "json",
+  "yaml",
+  "name",
+  "go-template",
+  "template",
+  "jsonpath",
+  "jsonpath-as-json",
+]);
+
+function isInlineOutputFormat(output: string): boolean {
+  return (
+    typeof output === "string" &&
+    INLINE_OUTPUT_FORMATS.has(output.split("=")[0])
+  );
+}
+
 export const kubectlCreateSchema = {
   name: "kubectl_create",
   description:
@@ -24,15 +46,12 @@ export const kubectlCreateSchema = {
           "yaml",
           "name",
           "go-template",
-          "go-template-file",
           "template",
-          "templatefile",
           "jsonpath",
           "jsonpath-as-json",
-          "jsonpath-file",
         ],
         description:
-          "Output format. One of: json|yaml|name|go-template|go-template-file|template|templatefile|jsonpath|jsonpath-as-json|jsonpath-file",
+          "Output format. One of: json|yaml|name|go-template|template|jsonpath|jsonpath-as-json. The template formats take their template inline, e.g. 'jsonpath={.metadata.name}'.",
         default: "yaml",
       },
       validate: {
@@ -266,11 +285,37 @@ export async function kubectlCreate(
       }
     }
 
+    // kubectl parses --from-file as a comma-separated list, so a
+    // fromFileContent key of "x=/etc/passwd,y" would add a second source that
+    // names a file on the server. Kubernetes only accepts these characters in
+    // ConfigMap and Secret data keys anyway, so no legitimate key is refused.
+    // Checked up front so a bad entry fails before any temp file is written.
+    for (const entry of input.fromFileContent ?? []) {
+      if (entry?.key && !DATA_KEY_PATTERN.test(String(entry.key))) {
+        throw new McpError(
+          ErrorCode.InvalidRequest,
+          `Invalid fromFileContent key ${JSON.stringify(entry.key)}: keys ` +
+            `may only contain letters, digits, '-', '_' and '.'`
+        );
+      }
+    }
+
     // Set up common parameters
     const namespace = input.namespace || "default";
     const dryRun = input.dryRun || false;
     const validate = input.validate ?? true;
     const output = input.output || "yaml";
+
+    // The schema's enum is not enforced at runtime, and kubectl reads a file
+    // for some formats ("templatefile=<path>"), so only the formats that
+    // render inline are passed through.
+    if (!isInlineOutputFormat(output)) {
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        `Unsupported output format "${output}". Use one of: ` +
+          `${[...INLINE_OUTPUT_FORMATS].join(", ")}.`
+      );
+    }
     const context = input.context || "";
 
     const command = "kubectl";
