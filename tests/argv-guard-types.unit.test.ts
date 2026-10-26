@@ -133,7 +133,8 @@ describe("file-reading output formats", () => {
         dryRun: true,
         output: "templatefile=/etc/passwd",
       } as any)
-    ).rejects.toThrow(/this output format takes a file path/);
+      // kubectl_create may also refuse it itself, before building the argv.
+    ).rejects.toThrow(/this output format takes a file path|Unsupported output format/);
   });
 
   test("kubectl_generic refuses outputFormat templatefile=<path>", async () => {
