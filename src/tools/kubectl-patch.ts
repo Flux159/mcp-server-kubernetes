@@ -40,8 +40,9 @@ export const kubectlPatchSchema = {
         default: "strategic",
       },
       patchData: {
-        type: "object",
-        description: "Patch data as a JSON object",
+        type: ["object", "array"],
+        description:
+          "Patch data: a JSON object for 'strategic' and 'merge' patches, or an array of JSON Patch operations for patchType 'json'",
       },
       patchFile: {
         type: "string",

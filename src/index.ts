@@ -79,6 +79,7 @@ import { registerPromptHandlers } from "./prompts/index.js";
 import { ping, pingSchema } from "./tools/ping.js";
 import { startStreamableHTTPServer } from "./utils/streamable-http.js";
 import { withTelemetry } from "./middleware/telemetry-middleware.js";
+import { validateToolInput } from "./utils/validate-tool-input.js";
 
 // Check environment variables for tool filtering
 const allowOnlyReadonlyTools = process.env.ALLOW_ONLY_READONLY_TOOLS === "true";
@@ -251,7 +252,7 @@ server.setRequestHandler(
     method: string;
   }) => {
     try {
-      const { name, arguments: input = {} } = request.params;
+      const { name, arguments: rawInput } = request.params;
 
       if (!isToolAllowed(name)) {
         throw new McpError(
@@ -259,6 +260,13 @@ server.setRequestHandler(
           `Tool '${name}' is not allowed under the current server configuration`
         );
       }
+
+      // The handlers below only cast their arguments; nothing else checks
+      // them against the tool's inputSchema before they reach kubectl/helm.
+      const tool = allTools.find((t) => t.name === name);
+      const input: Record<string, any> = tool
+        ? validateToolInput(tool, rawInput)
+        : rawInput ?? {};
 
       // Handle new kubectl-style commands
       if (name === "kubectl_context") {

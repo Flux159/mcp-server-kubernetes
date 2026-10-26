@@ -41,16 +41,10 @@ export const kubectlCreateSchema = {
       // General options
       dryRun: dryRunParameter,
       output: {
+        // No enum: the template formats carry their template after "=",
+        // which an enum cannot express. kubectlCreate checks the format
+        // against INLINE_OUTPUT_FORMATS instead.
         type: "string",
-        enum: [
-          "json",
-          "yaml",
-          "name",
-          "go-template",
-          "template",
-          "jsonpath",
-          "jsonpath-as-json",
-        ],
         description:
           "Output format. One of: json|yaml|name|go-template|template|jsonpath|jsonpath-as-json. The template formats take their template inline, e.g. 'jsonpath={.metadata.name}'.",
         default: "yaml",
