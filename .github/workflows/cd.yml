@@ -72,12 +72,20 @@ jobs:
           # Restore the original kubeconfig (optional)
           sed -i 's|http://localhost:8080|https://192.168.49.2:8443|g' ~/.kube/config
 
+      # The release version is the pushed tag, minus its "v". Versions never
+      # reach .10: after x.y.9 comes x.(y+1).0, and after x.9.9 comes
+      # (x+1).0.0, so minor and patch must each be a single digit.
       - name: Update version number
-        uses: reecetech/version-increment@2024.10.1
         id: version
-        with:
-          scheme: semver
-          increment: patch
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          VERSION="${TAG#v}"
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]\.[0-9]$ ]]; then
+            echo "::error::Tag $TAG is not a release version. Use v<major>.<minor>.<patch> with single-digit minor and patch (4.1.9 -> v4.2.0, 4.9.9 -> v5.0.0)."
+            exit 1
+          fi
+          echo "current-version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Configure Git
         run: |
