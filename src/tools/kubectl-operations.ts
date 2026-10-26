@@ -1,4 +1,7 @@
-import { execFileSyncSafe } from "../security/kubectl-flags.js";
+import {
+  assertNotFlagLike,
+  execFileSyncSafe,
+} from "../security/kubectl-flags.js";
 import {
   ExplainResourceParams,
   ListApiResourcesParams,
@@ -97,6 +100,10 @@ export async function explainResource(
   params: ExplainResourceParams
 ): Promise<{ content: { type: string; text: string }[] }> {
   try {
+    // The resource is a positional operand; a leading "-" would make kubectl
+    // parse it as a flag.
+    assertNotFlagLike(params.resource, "resource");
+
     const command = "kubectl";
     const args = ["explain"];
 

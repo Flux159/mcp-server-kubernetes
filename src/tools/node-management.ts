@@ -6,7 +6,10 @@
  * Note: Use kubectl_get with resourceType="nodes" to list nodes.
  */
 
-import { execFileSyncSafe } from "../security/kubectl-flags.js";
+import {
+  assertNotFlagLike,
+  execFileSyncSafe,
+} from "../security/kubectl-flags.js";
 import { getSpawnMaxBuffer } from "../config/max-buffer.js";
 
 /**
@@ -165,6 +168,10 @@ export async function nodeManagement(
   } = params;
 
   try {
+    // The node name is a positional operand of cordon/drain/uncordon; a
+    // leading "-" would make kubectl parse it as a flag.
+    assertNotFlagLike(nodeName, "nodeName");
+
     switch (operation) {
       case "cordon":
         return handleCordonNode(nodeName!);

@@ -1,5 +1,8 @@
 import { KubernetesManager } from "../types.js";
-import { execFileSyncSafe } from "../security/kubectl-flags.js";
+import {
+  assertNotFlagLike,
+  execFileSyncSafe,
+} from "../security/kubectl-flags.js";
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import * as fs from "fs";
 import * as path from "path";
@@ -243,6 +246,12 @@ export async function kubectlCreate(
         `Name is required when creating a ${input.resourceType}`
       );
     }
+
+    // Positional operands of "kubectl create <type> [<subtype>] <name>": a
+    // leading "-" would make kubectl parse them as flags.
+    assertNotFlagLike(input.name, "name");
+    assertNotFlagLike(input.secretType, "secretType");
+    assertNotFlagLike(input.serviceType, "serviceType");
 
     // Reject server-side filesystem reads on remote transports. Over SSE /
     // Streamable HTTP the path resolves on the MCP server host, not the

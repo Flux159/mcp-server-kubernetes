@@ -1,5 +1,8 @@
 import { KubernetesManager } from "../types.js";
-import { execFileSyncSafe } from "../security/kubectl-flags.js";
+import {
+  assertNotFlagLike,
+  execFileSyncSafe,
+} from "../security/kubectl-flags.js";
 import { isRemoteTransport } from "../security/transport.js";
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import * as fs from "fs";
@@ -95,6 +98,11 @@ export async function kubectlPatch(
     const dryRun = input.dryRun || false;
     const context = input.context || "";
     let tempFile: string | null = null;
+
+    // Positional operands: a leading "-" would make kubectl parse them as
+    // flags (e.g. --filename=<server path>).
+    assertNotFlagLike(input.resourceType, "resourceType");
+    assertNotFlagLike(input.name, "name");
 
     const command = "kubectl";
     const args = ["patch", input.resourceType, input.name, "-n", namespace];
