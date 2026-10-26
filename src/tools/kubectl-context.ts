@@ -7,8 +7,14 @@ export const kubectlContextSchema = {
   name: "kubectl_context",
   description:
     "Manage Kubernetes contexts - list, get, or set the current context",
+  // Not read-only: "set" runs "kubectl config use-context", which rewrites
+  // the current-context in the kubeconfig and so retargets every later
+  // command. Under ALLOW_ONLY_READONLY_TOOLS the tool stays available for
+  // list/get, and "set" is refused at call time.
   annotations: {
-    readOnlyHint: true,
+    readOnlyHint: false,
+    destructiveHint: false,
+    idempotentHint: true,
   },
   inputSchema: {
     type: "object",
@@ -255,6 +261,16 @@ export async function kubectlContext(
         }
 
       case "set":
+        if (process.env.ALLOW_ONLY_READONLY_TOOLS === "true") {
+          throw new McpError(
+            ErrorCode.InvalidRequest,
+            "Switching the current context is disabled in read-only mode " +
+              "(ALLOW_ONLY_READONLY_TOOLS=true): it rewrites the kubeconfig " +
+              "and retargets every later command. Pass a 'context' to " +
+              "individual tools instead."
+          );
+        }
+
         // Validate input
         if (!name) {
           throw new McpError(
