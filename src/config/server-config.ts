@@ -1,6 +1,6 @@
 export const serverConfig = {
   name: "kubernetes",
-  version: "4.2.0",
+  version: "4.2.1",
   capabilities: {
     resources: {},
     tools: {},
