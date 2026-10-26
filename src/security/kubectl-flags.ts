@@ -153,11 +153,25 @@ const FILE_READ_SHORT_FLAGS = new Set<string>([
 // assertSafeArgv refuses them in any argv, on any transport, rather than only
 // where a server-side path would be attacker-chosen. Every tool has positional
 // slots, read-only ones included, so a name-shaped denial is not enough.
+//
+// kubectl also accepts "templatefile" as an alias of "go-template-file", so
+// the set is a list of known spellings rather than the whole rule: every
+// file-reading format kubectl has ever shipped is named "...file", and
+// isFileReadOutputFormat refuses that suffix too, so an alias added upstream
+// is refused before anyone has to notice it here.
 const FILE_READ_OUTPUT_FORMATS = new Set<string>([
   "go-template-file",
+  "templatefile",
   "jsonpath-file",
   "custom-columns-file",
 ]);
+
+// `format` is the full -o value, e.g. "templatefile=/etc/passwd" or just
+// "go-template-file" when the path arrives through --template instead.
+function isFileReadOutputFormat(format: string): boolean {
+  const name = format.split("=")[0].toLowerCase();
+  return FILE_READ_OUTPUT_FORMATS.has(name) || name.endsWith("file");
+}
 
 function isUnsafeFlagsAllowed(): boolean {
   return process.env.ALLOW_KUBECTL_UNSAFE_FLAGS === "true";
@@ -224,6 +238,22 @@ function isDangerousFlagName(rawName: string, fromArgs: boolean): boolean {
   return false;
 }
 
+// Tool inputs are typed string[] at compile time only: nothing validates the
+// JSON a client sends against the tool's inputSchema, so an `args` entry can be
+// an array, number or object. child_process stringifies every argv element, so
+// ["--server=https://attacker"] reaches kubectl as "--server=https://attacker"
+// — a token the scans below would never have looked at had they skipped it.
+// Refuse anything that is not a string rather than guess how it will print.
+function assertStringToken(tok: unknown): asserts tok is string {
+  if (typeof tok === "string") return;
+  throw new McpError(
+    ErrorCode.InvalidParams,
+    `Refusing to run kubectl/helm with a non-string argument ` +
+      `(${JSON.stringify(tok) ?? typeof tok}): every command-line argument ` +
+      `must be a string.`
+  );
+}
+
 function reject(flag: string): never {
   throw new McpError(
     ErrorCode.InvalidParams,
@@ -258,7 +288,7 @@ export function assertNoDangerousFlags(
 
   if (args) {
     for (const tok of args) {
-      if (typeof tok !== "string") continue;
+      assertStringToken(tok);
       if (!tok.startsWith("-")) continue;
       if (isDangerousFlagName(tok, true)) reject(tok);
     }
@@ -277,11 +307,11 @@ export function assertNoDangerousFlags(
  * flag unless ALLOW_KUBECTL_UNSAFE_FLAGS=true.
  */
 export function assertSafeArgv(args: readonly string[]): void {
+  args.forEach(assertStringToken);
   if (isUnsafeFlagsAllowed()) return;
 
   for (let i = 0; i < args.length; i++) {
     const tok = args[i];
-    if (typeof tok !== "string") continue;
     if (!tok.startsWith("-")) continue;
     const name = normalizeFlagName(tok);
     if (ARGV_DANGEROUS_FLAGS.has(name) || SHORT_ALIASES.has(name)) reject(tok);
@@ -293,10 +323,7 @@ export function assertSafeArgv(args: readonly string[]): void {
     // ("-o go-template-file=<path>"), so it has to be matched on the value
     // rather than on the flag name.
     const format = outputFormatValue(tok, args[i + 1]);
-    if (
-      format !== undefined &&
-      FILE_READ_OUTPUT_FORMATS.has(format.split("=")[0])
-    ) {
+    if (format !== undefined && isFileReadOutputFormat(format)) {
       rejectOutputFileRead(tok, format);
     }
   }
@@ -381,7 +408,8 @@ export function assertNoRemoteFileReads(args: readonly string[]): void {
 
   for (let i = 0; i < args.length; i++) {
     const tok = args[i];
-    if (typeof tok !== "string" || !tok.startsWith("-")) continue;
+    assertStringToken(tok);
+    if (!tok.startsWith("-")) continue;
 
     if (FILE_READ_FLAGS.has(normalizeFlagName(tok))) rejectFileRead(tok);
 
