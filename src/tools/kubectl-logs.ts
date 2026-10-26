@@ -1,5 +1,8 @@
 import { KubernetesManager } from "../types.js";
-import { execFileSyncSafe } from "../security/kubectl-flags.js";
+import {
+  assertNotFlagLike,
+  execFileSyncSafe,
+} from "../security/kubectl-flags.js";
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import { getSpawnMaxBuffer } from "../config/max-buffer.js";
 import {
@@ -87,6 +90,10 @@ export async function kubectlLogs(
   }
 ) {
   try {
+    // The resource name is a positional operand; a leading "-" would make
+    // kubectl parse it as a flag.
+    assertNotFlagLike(input.name, "name");
+
     const resourceType = (input.resourceType ?? "pod").toLowerCase();
     const name = input.name;
     const namespace = input.namespace || "default";

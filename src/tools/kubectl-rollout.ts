@@ -1,5 +1,8 @@
 import { KubernetesManager } from "../types.js";
-import { execFileSyncSafe } from "../security/kubectl-flags.js";
+import {
+  assertNotFlagLike,
+  execFileSyncSafe,
+} from "../security/kubectl-flags.js";
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import { getSpawnMaxBuffer } from "../config/max-buffer.js";
 import { contextParameter, namespaceParameter } from "../models/common-parameters.js";
@@ -73,6 +76,12 @@ export async function kubectlRollout(
     const namespace = input.namespace || "default";
     const watch = input.watch || false;
     const context = input.context || "";
+
+    // The schema enums are not enforced at runtime, so the positional
+    // operands get the same flag-shape check as every other tool.
+    assertNotFlagLike(input.subCommand, "subCommand");
+    assertNotFlagLike(input.resourceType, "resourceType");
+    assertNotFlagLike(input.name, "name");
 
     const command = "kubectl";
     const args = [

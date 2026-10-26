@@ -10,7 +10,10 @@
  */
 
 import { KubernetesManager } from "../types.js";
-import { execFileSyncSafe } from "../security/kubectl-flags.js";
+import {
+  assertNotFlagLike,
+  execFileSyncSafe,
+} from "../security/kubectl-flags.js";
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import { getSpawnMaxBuffer } from "../config/max-buffer.js";
 import { contextParameter, namespaceParameter } from "../models/common-parameters.js";
@@ -100,6 +103,10 @@ export async function execInPod(
       );
     }
   }
+
+  // The pod name is a positional operand; a leading "-" would make kubectl
+  // parse it as a flag (e.g. --filename=<server path>).
+  assertNotFlagLike(input.name, "name");
 
   try {
     const args = ["exec", input.name, "-n", namespace];

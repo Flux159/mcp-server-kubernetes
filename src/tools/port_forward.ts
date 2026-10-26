@@ -2,7 +2,10 @@ import { spawn } from "child_process";
 import { z } from "zod";
 import { McpError } from "@modelcontextprotocol/sdk/types.js";
 import { KubernetesManager } from "../utils/kubernetes-manager.js";
-import { assertSafeArgv } from "../security/kubectl-flags.js";
+import {
+  assertNotFlagLike,
+  assertSafeArgv,
+} from "../security/kubectl-flags.js";
 
 // Use spawn instead of exec because port-forward is a long-running process
 async function executePortForward(
@@ -88,6 +91,10 @@ export async function startPortForward(
     namespace?: string;
   }
 ): Promise<{ content: { type: "text"; text: string }[] }> {
+  // resourceType leads the "<type>/<name>" operand, so a leading "-" would
+  // make kubectl parse the whole operand as a flag.
+  assertNotFlagLike(input.resourceType, "resourceType");
+
   const args = ["port-forward"];
   if (input.namespace) {
     args.push("-n", input.namespace);
