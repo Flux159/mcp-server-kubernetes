@@ -98,7 +98,8 @@ Releases are fully automated by the CD workflow (`.github/workflows/cd.yml`), wh
 To cut a release, after the PR is merged to `main`:
 
 - Create the tag and GitHub release targeting the current tip of `main` (the merge commit):
-  - Tag name: `v<x.y.z>` where `<x.y.z>` is the next patch version (e.g. `v4.0.2` after `v4.0.1`). This must match the version CD will compute, or the release-asset upload will fail.
+  - Tag name: `v<x.y.z>` where `<x.y.z>` is the next version. CD releases exactly the version in the tag name.
+  - **There are no `.10` releases.** Minor and patch are single digits and roll over: the next version after `4.1.9` is `4.2.0` (not `4.1.10`), and after `4.9.9` it is `5.0.0` (not `4.10.0`). Otherwise bump the patch (`v4.0.2` after `v4.0.1`). CD rejects a tag whose minor or patch is 10 or more.
   - Release title: `Release v<x.y.z>` (e.g. `Release v4.0.2`)
   - Release notes: one or two terse lines describing the change, referencing the PR number (e.g. `(#332)`), matching the style of prior releases.
 
