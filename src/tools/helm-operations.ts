@@ -10,7 +10,7 @@ import {
   assertNotFlagLike,
   execFileSyncSafe,
 } from "../security/kubectl-flags.js";
-import { writeFileSync, unlinkSync } from "fs";
+import { removeTempFile, writeTempFile } from "../utils/temp-file.js";
 import { dump } from "js-yaml";
 import { isRemoteTransport } from "../security/transport.js";
 import { getSpawnMaxBuffer } from "../config/max-buffer.js";
@@ -266,8 +266,7 @@ async function installHelmChartTemplate(params: {
       templateArgs.push("-f", params.valuesFile);
     } else if (params.values) {
       steps.push("Using provided values object");
-      tempValuesFile = `/tmp/values-${Date.now()}.yaml`;
-      writeFileSync(tempValuesFile, dump(params.values));
+      tempValuesFile = writeTempFile("values.yaml", dump(params.values));
       templateArgs.push("-f", tempValuesFile);
     }
 
@@ -277,21 +276,20 @@ async function installHelmChartTemplate(params: {
     } finally {
       // Clean up temp file
       if (tempValuesFile) {
-        unlinkSync(tempValuesFile);
+        removeTempFile(tempValuesFile);
       }
     }
 
     // Step 4: Apply YAML using kubectl
     steps.push("Applying YAML using kubectl");
-    const tempYamlFile = `/tmp/helm-template-${Date.now()}.yaml`;
-    writeFileSync(tempYamlFile, yamlOutput);
+    const tempYamlFile = writeTempFile("template.yaml", yamlOutput);
 
     try {
       executeCommand("kubectl", ["apply", "-f", tempYamlFile]);
       steps.push("Helm chart installed successfully using template mode");
     } finally {
       // Clean up temp file
-      unlinkSync(tempYamlFile);
+      removeTempFile(tempYamlFile);
     }
 
     return {
@@ -367,14 +365,13 @@ export async function installHelmChart(
     // Add values object if provided
     if (params.values) {
       const valuesContent = dump(params.values);
-      const tempFile = `/tmp/values-${Date.now()}.yaml`;
-      writeFileSync(tempFile, valuesContent);
+      const tempFile = writeTempFile("values.yaml", valuesContent);
 
       try {
         args.push("-f", tempFile);
         executeCommand("helm", args);
       } finally {
-        unlinkSync(tempFile);
+        removeTempFile(tempFile);
       }
     } else {
       executeCommand("helm", args);
@@ -441,14 +438,13 @@ export async function upgradeHelmChart(
     // Add values object if provided
     if (params.values) {
       const valuesContent = dump(params.values);
-      const tempFile = `/tmp/values-${Date.now()}.yaml`;
-      writeFileSync(tempFile, valuesContent);
+      const tempFile = writeTempFile("values.yaml", valuesContent);
 
       try {
         args.push("-f", tempFile);
         executeCommand("helm", args);
       } finally {
-        unlinkSync(tempFile);
+        removeTempFile(tempFile);
       }
     } else {
       executeCommand("helm", args);

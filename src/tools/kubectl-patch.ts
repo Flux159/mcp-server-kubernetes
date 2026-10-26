@@ -5,10 +5,8 @@ import {
 } from "../security/kubectl-flags.js";
 import { isRemoteTransport } from "../security/transport.js";
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
-import * as fs from "fs";
-import * as path from "path";
-import * as os from "os";
 import { getSpawnMaxBuffer } from "../config/max-buffer.js";
+import { removeTempFile, writeTempFile } from "../utils/temp-file.js";
 import {
   contextParameter,
   dryRunParameter,
@@ -132,9 +130,7 @@ export async function kubectlPatch(
       }
 
       // Create a temporary file for the patch data
-      const tmpDir = os.tmpdir();
-      tempFile = path.join(tmpDir, `patch-${Date.now()}.json`);
-      fs.writeFileSync(tempFile, JSON.stringify(input.patchData));
+      tempFile = writeTempFile("patch.json", JSON.stringify(input.patchData));
       args.push("--patch-file", tempFile);
     } else if (input.patchFile) {
       args.push("--patch-file", input.patchFile);
@@ -159,13 +155,7 @@ export async function kubectlPatch(
       });
 
       // Clean up temp file if created
-      if (tempFile) {
-        try {
-          fs.unlinkSync(tempFile);
-        } catch (err) {
-          console.warn(`Failed to delete temporary file ${tempFile}: ${err}`);
-        }
-      }
+      if (tempFile) removeTempFile(tempFile);
 
       return {
         content: [
@@ -177,13 +167,7 @@ export async function kubectlPatch(
       };
     } catch (error: any) {
       // Clean up temp file if created, even if command failed
-      if (tempFile) {
-        try {
-          fs.unlinkSync(tempFile);
-        } catch (err) {
-          console.warn(`Failed to delete temporary file ${tempFile}: ${err}`);
-        }
-      }
+      if (tempFile) removeTempFile(tempFile);
 
       throw new McpError(
         ErrorCode.InternalError,
