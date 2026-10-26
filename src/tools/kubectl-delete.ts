@@ -4,10 +4,8 @@ import {
   execFileSyncSafe,
 } from "../security/kubectl-flags.js";
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
-import * as fs from "fs";
-import * as path from "path";
-import * as os from "os";
 import { getSpawnMaxBuffer } from "../config/max-buffer.js";
+import { removeTempFile, writeTempFile } from "../utils/temp-file.js";
 import {
   contextParameter,
   namespaceParameter,
@@ -127,9 +125,7 @@ export async function kubectlDelete(
     // Handle deleting from manifest or file
     if (input.manifest) {
       // Create temporary file for the manifest
-      const tmpDir = os.tmpdir();
-      tempFile = path.join(tmpDir, `delete-manifest-${Date.now()}.yaml`);
-      fs.writeFileSync(tempFile, input.manifest);
+      tempFile = writeTempFile("manifest.yaml", input.manifest);
       args.push("-f", tempFile);
     } else if (input.filename) {
       args.push("-f", input.filename);
@@ -187,13 +183,7 @@ export async function kubectlDelete(
       });
 
       // Clean up temp file if created
-      if (tempFile) {
-        try {
-          fs.unlinkSync(tempFile);
-        } catch (err) {
-          console.warn(`Failed to delete temporary file ${tempFile}: ${err}`);
-        }
-      }
+      if (tempFile) removeTempFile(tempFile);
 
       return {
         content: [
@@ -205,13 +195,7 @@ export async function kubectlDelete(
       };
     } catch (error: any) {
       // Clean up temp file if created, even if command failed
-      if (tempFile) {
-        try {
-          fs.unlinkSync(tempFile);
-        } catch (err) {
-          console.warn(`Failed to delete temporary file ${tempFile}: ${err}`);
-        }
-      }
+      if (tempFile) removeTempFile(tempFile);
 
       if (error.status === 404 || error.message.includes("not found")) {
         return {

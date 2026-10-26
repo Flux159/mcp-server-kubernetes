@@ -1,10 +1,8 @@
 import { KubernetesManager } from "../types.js";
 import { execFileSyncSafe } from "../security/kubectl-flags.js";
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
-import * as fs from "fs";
-import * as path from "path";
-import * as os from "os";
 import { getSpawnMaxBuffer } from "../config/max-buffer.js";
+import { removeTempFile, writeTempFile } from "../utils/temp-file.js";
 import { contextParameter, namespaceParameter, dryRunParameter } from "../models/common-parameters.js";
 import { isRemoteTransport } from "../security/transport.js";
 
@@ -84,9 +82,7 @@ export async function kubectlApply(
     // Process manifest content if provided
     if (input.manifest) {
       // Create temporary file for the manifest
-      const tmpDir = os.tmpdir();
-      tempFile = path.join(tmpDir, `manifest-${Date.now()}.yaml`);
-      fs.writeFileSync(tempFile, input.manifest);
+      tempFile = writeTempFile("manifest.yaml", input.manifest);
       args.push("-f", tempFile);
     } else if (input.filename) {
       args.push("-f", input.filename);
@@ -119,13 +115,7 @@ export async function kubectlApply(
       });
 
       // Clean up temp file if created
-      if (tempFile) {
-        try {
-          fs.unlinkSync(tempFile);
-        } catch (err) {
-          console.warn(`Failed to delete temporary file ${tempFile}: ${err}`);
-        }
-      }
+      if (tempFile) removeTempFile(tempFile);
 
       return {
         content: [
@@ -137,13 +127,7 @@ export async function kubectlApply(
       };
     } catch (error: any) {
       // Clean up temp file if created, even if command failed
-      if (tempFile) {
-        try {
-          fs.unlinkSync(tempFile);
-        } catch (err) {
-          console.warn(`Failed to delete temporary file ${tempFile}: ${err}`);
-        }
-      }
+      if (tempFile) removeTempFile(tempFile);
 
       throw new McpError(
         ErrorCode.InternalError,

@@ -1,10 +1,8 @@
 import { KubernetesManager } from "../types.js";
 import { execFileSyncSafe } from "../security/kubectl-flags.js";
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
-import * as fs from "fs";
-import * as path from "path";
-import * as os from "os";
 import { getSpawnMaxBuffer } from "../config/max-buffer.js";
+import { removeTempFile, writeTempFile } from "../utils/temp-file.js";
 import { contextParameter, namespaceParameter, dryRunParameter } from "../models/common-parameters.js";
 import { isRemoteTransport } from "../security/transport.js";
 
@@ -279,17 +277,8 @@ export async function kubectlCreate(
 
     // Write client-provided content to a private temp file and return its
     // path. The file is tracked for cleanup after kubectl runs.
-    const writeTempFile = (
-      contents: string,
-      label: string,
-      ext = ""
-    ): string => {
-      const tmpDir = os.tmpdir();
-      const tempFile = path.join(
-        tmpDir,
-        `create-${label}-${Date.now()}-${tempFiles.length}${ext}`
-      );
-      fs.writeFileSync(tempFile, contents, { mode: 0o600 });
+    const trackTempFile = (name: string, contents: string): string => {
+      const tempFile = writeTempFile(name, contents);
       tempFiles.push(tempFile);
       return tempFile;
     };
@@ -307,7 +296,7 @@ export async function kubectlCreate(
             "Each fromFileContent entry requires a non-empty 'key'"
           );
         }
-        const tempFile = writeTempFile(entry.content ?? "", "fromfile");
+        const tempFile = trackTempFile("fromfile", entry.content ?? "");
         args.push(`--from-file=${entry.key}=${tempFile}`);
       });
     };
@@ -316,7 +305,7 @@ export async function kubectlCreate(
     if (input.manifest || input.filename) {
       if (input.manifest) {
         // Create temporary file for the manifest
-        args.push("-f", writeTempFile(input.manifest, "manifest", ".yaml"));
+        args.push("-f", trackTempFile("manifest.yaml", input.manifest));
       } else if (input.filename) {
         args.push("-f", input.filename);
       }
@@ -515,13 +504,7 @@ export async function kubectlCreate(
 
     // Remove any temp files created for inline content.
     const cleanupTempFiles = () => {
-      tempFiles.forEach((tempFile) => {
-        try {
-          fs.unlinkSync(tempFile);
-        } catch (err) {
-          console.warn(`Failed to delete temporary file ${tempFile}: ${err}`);
-        }
-      });
+      tempFiles.forEach(removeTempFile);
     };
 
     // Execute the command
