@@ -14,6 +14,7 @@ export const HelmValuesSchema = z.record(z.any());
 export interface HelmUninstallOperation {
   name: string;
   namespace: string;
+  context?: string;
 }
 
 export interface HelmInstallOperation {
@@ -25,6 +26,7 @@ export interface HelmInstallOperation {
   valuesFile?: string;
   createNamespace?: boolean;
   useTemplate?: boolean;
+  context?: string;
 }
 
 export interface HelmUpgradeOperation {
@@ -34,6 +36,7 @@ export interface HelmUpgradeOperation {
   repo?: string;
   values?: Record<string, any>;
   valuesFile?: string;
+  context?: string;
 }
 
 export type HelmResponse = {
