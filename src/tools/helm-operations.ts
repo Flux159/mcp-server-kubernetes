@@ -202,12 +202,23 @@ const assertOperandsNotFlagLike = (params: {
   chart?: string;
   namespace: string;
   repo?: string;
+  context?: string;
 }): void => {
   assertNotFlagLike(params.name, "release name");
   assertNotFlagLike(params.chart, "chart");
   assertNotFlagLike(params.namespace, "namespace");
   assertNotFlagLike(params.repo, "repo");
+  assertNotFlagLike(params.context, "context");
 };
+
+// helm selects the kubeconfig context with --kube-context, kubectl with
+// --context. Without them the command runs against the current context, not
+// the one the caller asked for.
+const helmContextArgs = (context?: string): string[] =>
+  context ? ["--kube-context", context] : [];
+
+const kubectlContextArgs = (context?: string): string[] =>
+  context ? ["--context", context] : [];
 
 /**
  * Install a Helm chart using template mode (helm template + kubectl apply).
@@ -222,6 +233,7 @@ async function installHelmChartTemplate(params: {
   repo?: string;
   values?: object;
   valuesFile?: string;
+  context?: string;
 }): Promise<{ content: { type: string; text: string }[] }> {
   const steps: string[] = [];
 
@@ -236,7 +248,12 @@ async function installHelmChartTemplate(params: {
     // Step 2: Create namespace
     steps.push(`Creating namespace: ${params.namespace}`);
     try {
-      executeCommand("kubectl", ["create", "namespace", params.namespace]);
+      executeCommand("kubectl", [
+        "create",
+        "namespace",
+        params.namespace,
+        ...kubectlContextArgs(params.context),
+      ]);
     } catch (error: any) {
       if (!error.message.includes("already exists")) {
         throw error;
@@ -252,6 +269,7 @@ async function installHelmChartTemplate(params: {
       params.chart,
       "--namespace",
       params.namespace,
+      ...helmContextArgs(params.context),
     ];
 
     if (params.repo) {
@@ -285,7 +303,12 @@ async function installHelmChartTemplate(params: {
     const tempYamlFile = writeTempFile("template.yaml", yamlOutput);
 
     try {
-      executeCommand("kubectl", ["apply", "-f", tempYamlFile]);
+      executeCommand("kubectl", [
+        "apply",
+        "-f",
+        tempYamlFile,
+        ...kubectlContextArgs(params.context),
+      ]);
       steps.push("Helm chart installed successfully using template mode");
     } finally {
       // Clean up temp file
@@ -350,6 +373,7 @@ export async function installHelmChart(
       params.chart,
       "--namespace",
       params.namespace,
+      ...helmContextArgs(params.context),
     ];
 
     // Add create namespace flag if requested
@@ -428,6 +452,7 @@ export async function upgradeHelmChart(
       params.chart,
       "--namespace",
       params.namespace,
+      ...helmContextArgs(params.context),
     ];
 
     // Add values file if provided
@@ -492,6 +517,7 @@ export async function uninstallHelmChart(
       params.name,
       "--namespace",
       params.namespace,
+      ...helmContextArgs(params.context),
     ]);
 
     return {
