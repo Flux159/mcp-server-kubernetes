@@ -190,12 +190,12 @@ security:
   # kubectl_delete, uninstall_helm_chart, cleanup, kubectl_generic
   allowOnlyReadonly: false
   # When enabled, only these read-only tools are available:
-  # kubectl_get, kubectl_describe, kubectl_logs, kubectl_context,
+  # kubectl_get, kubectl_describe, kubectl_logs, kubectl_top, kubectl_context,
   # explain_resource, list_api_resources, ping
   allowedTools: ""  # Comma-separated list of allowed tools
   # Examples: "kubectl_get,kubectl_describe,kubectl_logs,kubectl_context"
   # Available tools: kubectl_get, kubectl_describe, kubectl_apply, kubectl_delete,
-  # kubectl_create, kubectl_logs, kubectl_patch, kubectl_scale, kubectl_rollout,
+  # kubectl_create, kubectl_logs, kubectl_top, kubectl_patch, kubectl_scale, kubectl_rollout,
   # kubectl_generic, kubectl_context, install_helm_chart, upgrade_helm_chart,
   # uninstall_helm_chart, start_port_forward, stop_port_forward, exec_in_pod,
   # explain_resource, list_api_resources, ping, cleanup
