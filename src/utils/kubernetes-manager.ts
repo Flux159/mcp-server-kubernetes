@@ -77,8 +77,9 @@ export class KubernetesManager {
         );
       }
     } else if (this.hasEnvKubeconfig()) {
-      // Load from KUBECONFIG
-      this.kc.loadFromFile(process.env.KUBECONFIG!);
+      // Priority 6: KUBECONFIG, which can list several files like kubectl
+      // accepts; keep the current-context of the first file
+      this.kc.loadFromDefault(undefined, true);
     } else {
       // Priority 7: Default file-based configuration (existing fallback)
       this.kc.loadFromDefault();
