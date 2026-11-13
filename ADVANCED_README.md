@@ -27,7 +27,7 @@ The server supports multiple authentication methods with the following priority 
 3. **`K8S_SERVER` + `K8S_TOKEN`** – Minimal env-based config
 4. **In-cluster** (if running in a pod)
 5. **`KUBECONFIG_PATH`** – Custom kubeconfig file path
-6. **`KUBECONFIG`** – Standard kubeconfig env var
+6. **`KUBECONFIG`** – Standard kubeconfig env var, which can list several files separated by `:` (`;` on Windows) like kubectl
 7. **Default file** – `~/.kube/config`
 
 ### Environment Variables

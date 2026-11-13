@@ -77,8 +77,9 @@ export class KubernetesManager {
         );
       }
     } else if (this.hasEnvKubeconfig()) {
-      // Load from KUBECONFIG
-      this.kc.loadFromFile(process.env.KUBECONFIG!);
+      // Priority 6: KUBECONFIG, which can list several files like kubectl
+      // accepts
+      this.loadEnvKubeconfigList();
     } else {
       // Priority 7: Default file-based configuration (existing fallback)
       this.kc.loadFromDefault();
@@ -266,6 +267,50 @@ export class KubernetesManager {
 
   private hasEnvKubeconfig(): boolean {
     return !!(process.env.KUBECONFIG && process.env.KUBECONFIG.trim());
+  }
+
+  /**
+   * Load every file listed in KUBECONFIG and merge them the way kubectl does:
+   * files that do not exist are skipped, the first file to define a cluster,
+   * user or context by name wins, and the first current-context set wins.
+   */
+  private loadEnvKubeconfigList(): void {
+    const listed = process.env
+      .KUBECONFIG!.split(path.delimiter)
+      .filter((file) => file.trim());
+    const files = listed.filter((file) => fs.existsSync(file));
+    if (files.length === 0) {
+      throw new Error(
+        `None of the files listed in KUBECONFIG exist: ${listed.join(", ")}`
+      );
+    }
+
+    this.kc.loadFromFile(files[0]);
+    for (const file of files.slice(1)) {
+      const next = new k8s.KubeConfig();
+      next.loadFromFile(file);
+
+      const has = (items: { name: string }[], name: string) =>
+        items.some((item) => item.name === name);
+      for (const cluster of next.getClusters()) {
+        if (!has(this.kc.getClusters(), cluster.name)) {
+          this.kc.addCluster(cluster);
+        }
+      }
+      for (const user of next.getUsers()) {
+        if (!has(this.kc.getUsers(), user.name)) {
+          this.kc.addUser(user);
+        }
+      }
+      for (const context of next.getContexts()) {
+        if (!has(this.kc.getContexts(), context.name)) {
+          this.kc.addContext(context);
+        }
+      }
+      if (!this.kc.getCurrentContext() && next.getCurrentContext()) {
+        this.kc.setCurrentContext(next.getCurrentContext());
+      }
+    }
   }
 
   /**
