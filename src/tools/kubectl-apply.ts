@@ -5,6 +5,7 @@ import { getSpawnMaxBuffer } from "../config/max-buffer.js";
 import { removeTempFile, writeTempFile } from "../utils/temp-file.js";
 import { contextParameter, namespaceParameter, dryRunParameter } from "../models/common-parameters.js";
 import { isRemoteTransport } from "../security/transport.js";
+import { getDefaultNamespace } from "../config/default-namespace.js";
 
 export const kubectlApplySchema = {
   name: "kubectl_apply",
@@ -70,7 +71,7 @@ export async function kubectlApply(
       );
     }
 
-    const namespace = input.namespace || "default";
+    const namespace = input.namespace || getDefaultNamespace();
     const dryRun = input.dryRun || false;
     const force = input.force || false;
     const context = input.context || "";

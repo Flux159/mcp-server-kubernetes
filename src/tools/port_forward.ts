@@ -6,6 +6,7 @@ import {
   assertNotFlagLike,
   assertSafeArgv,
 } from "../security/kubectl-flags.js";
+import { getDefaultNamespace } from "../config/default-namespace.js";
 
 // Use spawn instead of exec because port-forward is a long-running process
 async function executePortForward(
@@ -96,8 +97,9 @@ export async function startPortForward(
   assertNotFlagLike(input.resourceType, "resourceType");
 
   const args = ["port-forward"];
-  if (input.namespace) {
-    args.push("-n", input.namespace);
+  const namespace = input.namespace || process.env.K8S_NAMESPACE?.trim();
+  if (namespace) {
+    args.push("-n", namespace);
   }
   args.push(`${input.resourceType}/${input.resourceName}`);
   args.push(`${input.localPort}:${input.targetPort}`);
@@ -121,7 +123,7 @@ export async function startPortForward(
       },
       resourceType: input.resourceType,
       name: input.resourceName,
-      namespace: input.namespace || "default",
+      namespace: input.namespace || getDefaultNamespace(),
       ports: [{ local: input.localPort, remote: input.targetPort }],
     });
     return {

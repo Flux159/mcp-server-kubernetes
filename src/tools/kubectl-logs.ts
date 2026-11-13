@@ -9,6 +9,7 @@ import {
   contextParameter,
   namespaceParameter,
 } from "../models/common-parameters.js";
+import { getDefaultNamespace } from "../config/default-namespace.js";
 
 export const kubectlLogsSchema = {
   name: "kubectl_logs",
@@ -96,7 +97,7 @@ export async function kubectlLogs(
 
     const resourceType = (input.resourceType ?? "pod").toLowerCase();
     const name = input.name;
-    const namespace = input.namespace || "default";
+    const namespace = input.namespace || getDefaultNamespace();
     const context = input.context || "";
 
     const command = "kubectl";
