@@ -8,6 +8,7 @@ import { getSpawnMaxBuffer } from "../config/max-buffer.js";
 import { removeTempFile, writeTempFile } from "../utils/temp-file.js";
 import { contextParameter, namespaceParameter, dryRunParameter } from "../models/common-parameters.js";
 import { isRemoteTransport } from "../security/transport.js";
+import { getDefaultNamespace } from "../config/default-namespace.js";
 
 // Valid ConfigMap / Secret data keys, as Kubernetes validates them.
 const DATA_KEY_PATTERN = /^[-._a-zA-Z0-9]{1,253}$/;
@@ -302,7 +303,7 @@ export async function kubectlCreate(
     }
 
     // Set up common parameters
-    const namespace = input.namespace || "default";
+    const namespace = input.namespace || getDefaultNamespace();
     const dryRun = input.dryRun || false;
     const validate = input.validate ?? true;
     const output = input.output || "yaml";

@@ -17,6 +17,7 @@ import {
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import { getSpawnMaxBuffer } from "../config/max-buffer.js";
 import { contextParameter, namespaceParameter } from "../models/common-parameters.js";
+import { getDefaultNamespace } from "../config/default-namespace.js";
 
 /**
  * Schema for exec_in_pod tool.
@@ -77,7 +78,7 @@ export async function execInPod(
     context?: string;
   }
 ): Promise<{ content: { type: string; text: string }[] }> {
-  const namespace = input.namespace || "default";
+  const namespace = input.namespace || getDefaultNamespace();
 
   // Validate command is an array (defense in depth - schema should enforce this)
   if (!Array.isArray(input.command)) {

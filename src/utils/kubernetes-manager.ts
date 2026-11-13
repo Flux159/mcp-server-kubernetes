@@ -4,6 +4,8 @@ import * as path from "path";
 
 import * as k8s from "@kubernetes/client-node";
 
+import { getDefaultNamespace } from "../config/default-namespace.js";
+
 import { ResourceTracker, PortForwardTracker, WatchTracker } from "../types.js";
 
 export class KubernetesManager {
@@ -443,7 +445,7 @@ export class KubernetesManager {
    * Uses K8S_NAMESPACE environment variable if set, otherwise defaults to "default"
    */
   getDefaultNamespace(): string {
-    return process.env.K8S_NAMESPACE || "default";
+    return getDefaultNamespace();
   }
 
   /**

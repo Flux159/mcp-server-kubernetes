@@ -11,6 +11,7 @@ import {
   namespaceParameter,
 } from "../models/common-parameters.js";
 import { isRemoteTransport } from "../security/transport.js";
+import { getDefaultNamespace } from "../config/default-namespace.js";
 
 export const kubectlDeleteSchema = {
   name: "kubectl_delete",
@@ -113,7 +114,7 @@ export async function kubectlDelete(
       );
     }
 
-    const namespace = input.namespace || "default";
+    const namespace = input.namespace || getDefaultNamespace();
     const allNamespaces = input.allNamespaces || false;
     const force = input.force || false;
     const context = input.context || "";
