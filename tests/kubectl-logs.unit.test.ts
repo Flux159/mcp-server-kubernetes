@@ -226,4 +226,66 @@ describe("kubectl_logs tool", () => {
       "backup-29000000-pod": PLAIN_LOG,
     });
   });
+
+  test.each([
+    ["an empty job list", { items: [] }],
+    [
+      "jobs owned by other cronjobs",
+      {
+        items: [
+          {
+            metadata: {
+              name: "report-29000000",
+              ownerReferences: [{ kind: "CronJob", name: "report" }],
+            },
+          },
+        ],
+      },
+    ],
+  ])("cronjob path reports no jobs for %s", async (_case, jobList) => {
+    mockedExecFileSync.mockImplementation((_file: any, args: any) => {
+      const argv: string[] = args;
+      if (argv.includes("jobs")) return JSON.stringify(jobList);
+      return "";
+    });
+
+    const result = await kubectlLogs(mockK8sManager, {
+      resourceType: "cronjob",
+      name: "backup",
+      namespace: "ops",
+    });
+
+    const data = JSON.parse(result.content[0].text);
+    expect(data).toEqual({
+      message: "No jobs found for cronjob backup in namespace ops",
+    });
+    expect(allArgs().some((argv) => argv.includes("logs"))).toBe(false);
+  });
+
+  test("cronjob path looks up the jobs in the requested context", async () => {
+    mockedExecFileSync.mockImplementation((_file: any, args: any) => {
+      const argv: string[] = args;
+      if (argv.includes("jobs")) return JSON.stringify({ items: [] });
+      return "";
+    });
+
+    await kubectlLogs(mockK8sManager, {
+      resourceType: "cronjob",
+      name: "backup",
+      namespace: "ops",
+      context: "prod",
+    });
+
+    const jobsCall = allArgs().find((argv) => argv.includes("jobs"));
+    expect(jobsCall).toEqual([
+      "-n",
+      "ops",
+      "get",
+      "jobs",
+      "-o",
+      "json",
+      "--context",
+      "prod",
+    ]);
+  });
 });

@@ -155,6 +155,9 @@ export async function kubectlLogs(
         // The Jobs a CronJob creates carry no label with the CronJob name,
         // only an owner reference to it.
         const jobsArgs = ["-n", namespace, "get", "jobs", "-o", "json"];
+        if (context) {
+          jobsArgs.push("--context", context);
+        }
         try {
           const jobList = JSON.parse(
             execFileSyncSafe(command, jobsArgs, {
