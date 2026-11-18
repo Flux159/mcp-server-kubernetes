@@ -284,6 +284,48 @@ The MCP Kubernetes server includes specialized prompts to assist with common dia
 This prompt provides a systematic troubleshooting flow for Kubernetes pods. It accepts a `keyword` to identify relevant pods and an optional `namespace` to narrow the search.
 The prompt's output will guide you through an autonomous troubleshooting flow, providing instructions for identifying issues, collecting evidence, and suggesting remediation steps.
 
+## Troubleshooting
+
+### `spawnSync kubectl ENOENT` on macOS (Claude Desktop / GUI apps)
+
+If `kubectl` works in your terminal but the server fails with an error like:
+
+```
+Failed to execute kubectl get command: ... spawnSync kubectl ENOENT
+```
+
+the server process cannot find `kubectl` in its `PATH`. This is common on macOS: GUI
+applications (such as Claude Desktop) do not inherit the `PATH` from your shell profile
+(`~/.zshrc`, `~/.bashrc`), so a `kubectl` installed in `/usr/local/bin` or
+`/opt/homebrew/bin` is invisible to the bundled extension — even though `which kubectl`
+works in a terminal.
+
+Either of the following resolves it:
+
+- **Run it as a local MCP server via the developer config** instead of the bundled
+  extension. The developer config lets you set `env` for the server (see
+  [Advanced](#advanced)), which inherits a fuller environment.
+- **Set an explicit `PATH`** for the server in your client config so it includes the
+  directory that contains `kubectl` (for example `/usr/local/bin` or
+  `/opt/homebrew/bin`):
+
+  ```json
+  {
+    "mcpServers": {
+      "kubernetes": {
+        "command": "npx",
+        "args": ["mcp-server-kubernetes"],
+        "env": {
+          "PATH": "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+        }
+      }
+    }
+  }
+  ```
+
+The same applies to `helm` if you use Helm operations: make sure its directory is on the
+`PATH` you pass to the server.
+
 ## Local Development
 
 Make sure that you have [bun installed](https://bun.sh/docs/installation). Clone the repo & install dependencies:
