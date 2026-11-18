@@ -401,7 +401,7 @@ For Claude Desktop configuration with non-destructive mode:
 ```json
 {
   "mcpServers": {
-    "kubernetes-readonly": {
+    "kubernetes-non-destructive": {
       "command": "npx",
       "args": ["mcp-server-kubernetes"],
       "env": {
@@ -435,6 +435,46 @@ The following destructive operations are disabled:
 - `exec_in_pod`: Arbitrary command execution inside a pod (can read service-account tokens and change state)
 
 For additional advanced features, see the [ADVANCED_README.md](ADVANCED_README.md) and also the [docs](https://github.com/Flux159/mcp-server-kubernetes/tree/main/docs) folder for specific information on `helm_install`, `helm_template_apply`, node management & pod cleanup.
+
+### Read-Only Mode
+
+For strictly read-only access (no create, update, or delete), run the server with
+`ALLOW_ONLY_READONLY_TOOLS=true`. Unlike non-destructive mode — which still allows
+create/update operations such as `kubectl_apply`, `kubectl_scale`, and Helm install/upgrade —
+read-only mode exposes only the 8 read-only tools and blocks every write operation:
+
+```shell
+ALLOW_ONLY_READONLY_TOOLS=true npx mcp-server-kubernetes
+```
+
+For Claude Desktop configuration with read-only mode:
+
+```json
+{
+  "mcpServers": {
+    "kubernetes-readonly": {
+      "command": "npx",
+      "args": ["mcp-server-kubernetes"],
+      "env": {
+        "ALLOW_ONLY_READONLY_TOOLS": "true"
+      }
+    }
+  }
+}
+```
+
+### Commands Available in Read-Only Mode
+
+Only the following read-only operations are available:
+
+- `kubectl_get`
+- `kubectl_describe`
+- `kubectl_logs`
+- `kubectl_context`
+- `kubectl_reconnect`
+- `explain_resource`
+- `list_api_resources`
+- `ping`
 
 ## Architecture
 
