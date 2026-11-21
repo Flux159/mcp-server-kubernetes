@@ -6,6 +6,7 @@ import {
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import { getSpawnMaxBuffer } from "../config/max-buffer.js";
 import { contextParameter, namespaceParameter } from "../models/common-parameters.js";
+import { getDefaultNamespace } from "../config/default-namespace.js";
 
 export const kubectlScaleSchema = {
   name: "kubectl_scale",
@@ -54,7 +55,7 @@ export async function kubectlScale(
     assertNotFlagLike(input.resourceType, "resourceType");
     assertNotFlagLike(input.name, "name");
 
-    const namespace = input.namespace || "default";
+    const namespace = input.namespace || getDefaultNamespace();
     const resourceType = input.resourceType || "deployment";
     const context = input.context || "";
 

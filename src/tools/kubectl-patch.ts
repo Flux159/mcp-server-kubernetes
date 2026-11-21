@@ -12,6 +12,7 @@ import {
   dryRunParameter,
   namespaceParameter,
 } from "../models/common-parameters.js";
+import { getDefaultNamespace } from "../config/default-namespace.js";
 
 export const kubectlPatchSchema = {
   name: "kubectl_patch",
@@ -92,7 +93,7 @@ export async function kubectlPatch(
       );
     }
 
-    const namespace = input.namespace || "default";
+    const namespace = input.namespace || getDefaultNamespace();
     const patchType = input.patchType || "strategic";
     const dryRun = input.dryRun || false;
     const context = input.context || "";

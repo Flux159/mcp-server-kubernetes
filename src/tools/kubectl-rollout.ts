@@ -6,6 +6,7 @@ import {
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import { getSpawnMaxBuffer } from "../config/max-buffer.js";
 import { contextParameter, namespaceParameter } from "../models/common-parameters.js";
+import { getDefaultNamespace } from "../config/default-namespace.js";
 
 export const kubectlRolloutSchema = {
   name: "kubectl_rollout",
@@ -73,7 +74,7 @@ export async function kubectlRollout(
   }
 ) {
   try {
-    const namespace = input.namespace || "default";
+    const namespace = input.namespace || getDefaultNamespace();
     const watch = input.watch || false;
     const context = input.context || "";
 

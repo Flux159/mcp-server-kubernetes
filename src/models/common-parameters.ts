@@ -1,3 +1,5 @@
+import { getDefaultNamespace } from "../config/default-namespace.js";
+
 export const contextParameter = {
   type: "string" as const,
   description: "Kubeconfig Context to use for the command (optional - defaults to null)",
@@ -7,7 +9,7 @@ export const contextParameter = {
 export const namespaceParameter = {
   type: "string" as const,
   description: "Kubernetes namespace",
-  default: "default",
+  default: getDefaultNamespace(),
 };
 
 export const dryRunParameter = {

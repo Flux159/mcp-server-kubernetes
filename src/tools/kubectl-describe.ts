@@ -9,6 +9,7 @@ import {
   namespaceParameter,
   contextParameter,
 } from "../models/common-parameters.js";
+import { getDefaultNamespace } from "../config/default-namespace.js";
 
 export const kubectlDescribeSchema = {
   name: "kubectl_describe",
@@ -60,7 +61,7 @@ export async function kubectlDescribe(
 
     const resourceType = input.resourceType.toLowerCase();
     const name = input.name;
-    const namespace = input.namespace || "default";
+    const namespace = input.namespace || getDefaultNamespace();
     const allNamespaces = input.allNamespaces || false;
     const context = input.context || "";
 

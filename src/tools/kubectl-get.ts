@@ -10,6 +10,7 @@ import {
   contextParameter,
   namespaceParameter,
 } from "../models/common-parameters.js";
+import { getDefaultNamespace } from "../config/default-namespace.js";
 
 export const kubectlGetSchema = {
   name: "kubectl_get",
@@ -86,7 +87,7 @@ export async function kubectlGet(
 
     const resourceType = input.resourceType.toLowerCase();
     const name = input.name || "";
-    const namespace = input.namespace || "default";
+    const namespace = input.namespace || getDefaultNamespace();
     const output = input.output || "json";
     const allNamespaces = input.allNamespaces || false;
     const labelSelector = input.labelSelector || "";
