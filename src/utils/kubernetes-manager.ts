@@ -19,6 +19,7 @@ export class KubernetesManager {
 
   constructor() {
     this.kc = new k8s.KubeConfig();
+    let inCluster = false;
 
     if (this.hasEnvKubeconfigYaml()) {
       // Priority 1: Full kubeconfig as YAML string
@@ -63,6 +64,7 @@ export class KubernetesManager {
     } else if (this.isRunningInCluster()) {
       // Priority 4: Check if running in cluster
       this.kc.loadFromCluster();
+      inCluster = true;
     } else if (this.hasEnvKubeconfigPath()) {
       // Priority 5: Custom kubeconfig file path using KUBECONFIG_PATH
       try {
@@ -89,6 +91,9 @@ export class KubernetesManager {
     if (process.env.K8S_CONTEXT) {
       try {
         this.setCurrentContext(process.env.K8S_CONTEXT);
+        if (!inCluster) {
+          this.pinKubectlContext(process.env.K8S_CONTEXT);
+        }
       } catch (error) {
         console.warn(
           `Warning: Could not set context to ${process.env.K8S_CONTEXT}: ${
@@ -447,15 +452,45 @@ export class KubernetesManager {
   }
 
   /**
+   * kubectl and helm run as child processes and read the kubeconfig files
+   * themselves, so the K8S_CONTEXT override set on this.kc does not reach
+   * them. kubectl takes current-context from the first file in KUBECONFIG
+   * that sets it, so put a file that only sets current-context in front of
+   * the files in use. The user's own kubeconfig is left untouched.
+   */
+  private pinKubectlContext(contextName: string): void {
+    const files = process.env.KUBECONFIG
+      ? process.env.KUBECONFIG.split(path.delimiter).filter((file) =>
+          file.trim()
+        )
+      : [path.join(os.homedir(), ".kube", "config")];
+    const overridePath = this.writeTempKubeconfig(
+      `apiVersion: v1\nkind: Config\ncurrent-context: ${JSON.stringify(
+        contextName
+      )}\n`
+    );
+    process.env.KUBECONFIG = [overridePath, ...files].join(path.delimiter);
+  }
+
+  /**
    * Create temporary kubeconfig file from YAML content for kubectl commands
    * @param kubeconfigYaml YAML content of the kubeconfig
    */
   private createTempKubeconfigFromYaml(kubeconfigYaml: string): void {
-    try {
-      if (!kubeconfigYaml || typeof kubeconfigYaml !== "string") {
-        throw new Error(`Invalid kubeconfigYaml: ${typeof kubeconfigYaml}`);
-      }
+    if (!kubeconfigYaml || typeof kubeconfigYaml !== "string") {
+      throw new Error(`Invalid kubeconfigYaml: ${typeof kubeconfigYaml}`);
+    }
 
+    // Set KUBECONFIG environment variable for kubectl commands
+    process.env.KUBECONFIG = this.writeTempKubeconfig(kubeconfigYaml);
+  }
+
+  /**
+   * Write a kubeconfig to a temporary file that is removed when the process
+   * exits, and return its path.
+   */
+  private writeTempKubeconfig(kubeconfigYaml: string): string {
+    try {
       const tempDir = os.tmpdir();
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
       const randomString = Math.random().toString(36).substring(2);
@@ -469,9 +504,6 @@ export class KubernetesManager {
         mode: 0o600,
         encoding: "utf8",
       });
-
-      // Set KUBECONFIG environment variable for kubectl commands
-      process.env.KUBECONFIG = tempKubeconfigPath;
 
       // Function to clean up the temporary file
       const cleanupTempFile = () => {
@@ -499,6 +531,8 @@ export class KubernetesManager {
       ["SIGUSR1", "SIGUSR2"].forEach((signal) => {
         process.on(signal, cleanupTempFile);
       });
+
+      return tempKubeconfigPath;
     } catch (error) {
       // Continue without temporary file - kubectl commands may fail but JavaScript client will work
       throw error;
