@@ -96,6 +96,33 @@ describe("kubectl_logs tool", () => {
     ]);
   });
 
+  test("rejects follow without running kubectl", async () => {
+    for (const resourceType of ["pod", "deployment"]) {
+      await expect(
+        kubectlLogs(mockK8sManager, {
+          resourceType,
+          name: "nginx",
+          namespace: "default",
+          follow: true,
+        })
+      ).rejects.toThrow(/follow/);
+    }
+    expect(mockedExecFileSync).not.toHaveBeenCalled();
+  });
+
+  test("follow: false still fetches logs", async () => {
+    routeKubectl({ logs: PLAIN_LOG });
+
+    await kubectlLogs(mockK8sManager, {
+      resourceType: "pod",
+      name: "nginx",
+      namespace: "default",
+      follow: false,
+    });
+
+    expect(allArgs()[0]).not.toContain("--follow");
+  });
+
   test("pod path works with no container arg", async () => {
     routeKubectl({ logs: PLAIN_LOG });
 

@@ -481,6 +481,55 @@ const GENERIC_DENIED_VERBS = new Map<string, string>([
   ["edit", "it opens an interactive editor on the MCP server host"],
 ]);
 
+// Flags that keep a kubectl process streaming until the connection drops, per
+// verb. They are matched per verb because the same spelling means something
+// else elsewhere: "-f" is --filename for get/apply/delete, and "rollout
+// status --watch" exits when the rollout completes. The structured
+// kubectl_logs tool refuses `follow` for the same reason.
+const GENERIC_STREAMING_FLAGS = new Map<
+  string,
+  { long: readonly string[]; short: string }
+>([
+  ["get", { long: ["watch", "watch-only"], short: "w" }],
+  ["events", { long: ["watch"], short: "w" }],
+  ["logs", { long: ["follow"], short: "f" }],
+]);
+
+// strconv.ParseBool's false spellings, which pflag accepts for "--flag=value".
+const FALSE_VALUES = new Set<string>(["0", "f", "F", "false", "False", "FALSE"]);
+
+// The first token in `args` that turns on one of the verb's streaming flags,
+// or undefined. An explicit false ("--watch=false", "-w=false") is not a hit.
+// Like cpOperands, a value of a split flag ("-n -w") is treated as a flag:
+// that can only refuse a call, never let one through.
+function findStreamingFlag(args: readonly string[]): string | undefined {
+  const spec = GENERIC_STREAMING_FLAGS.get(args[0]);
+  if (spec === undefined) return undefined;
+
+  for (const tok of args.slice(1)) {
+    assertStringToken(tok);
+    // Everything after "--" is an operand.
+    if (tok === "--") break;
+    if (!tok.startsWith("-")) continue;
+
+    let value: string | undefined;
+    if (tok.startsWith("--")) {
+      if (!spec.long.includes(normalizeFlagName(tok))) continue;
+      const eq = tok.indexOf("=");
+      if (eq !== -1) value = tok.slice(eq + 1);
+    } else {
+      // pflag reads "-w=false" and "-Aw" alike, so locate the letter in the
+      // cluster the same way the dangerous-flag scan does.
+      const letters = shortFlagLetters(tok);
+      const at = letters === null ? -1 : letters.indexOf(spec.short);
+      if (at === -1) continue;
+      if (tok[at + 2] === "=") value = tok.slice(at + 3);
+    }
+    if (value === undefined || !FALSE_VALUES.has(value)) return tok;
+  }
+  return undefined;
+}
+
 // kubectl verbs whose positional operands are paths on the machine kubectl
 // runs on. Like FILE_READ_FLAGS they are only a problem on a remote transport,
 // where that machine is the server host rather than the caller's — but the
@@ -544,6 +593,15 @@ export function assertAllowedGenericCommand(args: readonly string[]): void {
   const reason = GENERIC_DENIED_VERBS.get(verb);
   if (reason !== undefined) rejectVerb(verb, reason);
 
+  const streaming = findStreamingFlag(args);
+  if (streaming !== undefined) {
+    rejectVerb(
+      verb,
+      `"${streaming}" never exits, which would block the MCP server for ` +
+        `every client`
+    );
+  }
+
   if (verb === "cp") {
     const destinations = cpOperands(args).slice(1);
     const local = destinations.find((operand) => !operand.includes(":"));
@@ -575,6 +633,22 @@ function cpOperands(args: readonly string[]): string[] {
     if (afterSeparator || !tok.startsWith("-")) operands.push(tok);
   }
   return operands;
+}
+
+/**
+ * Refuse kubectl_logs `follow`: "kubectl logs --follow" never exits, and
+ * execFileSync blocks the event loop until it does. Honours the same
+ * ALLOW_KUBECTL_UNSAFE_FLAGS escape hatch as the generic verb denials.
+ */
+export function assertNotFollowing(follow: boolean | undefined): void {
+  if (!follow || isUnsafeFlagsAllowed()) return;
+
+  throw new McpError(
+    ErrorCode.InvalidParams,
+    `Refusing to run "kubectl logs --follow": it never exits, which would ` +
+      `block the MCP server for every client. Use "tail" or "since" to ` +
+      `read recent logs instead.`
+  );
 }
 
 /**

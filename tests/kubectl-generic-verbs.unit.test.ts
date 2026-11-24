@@ -78,12 +78,69 @@ describe("assertAllowedGenericCommand", () => {
       }
     });
 
+    // "get --watch" and "logs --follow" never exit either: execFileSync
+    // blocks the event loop until the child is killed.
+    describe("streaming flags", () => {
+      const streaming: [string, string[]][] = [
+        ["get --watch", ["get", "pods", "--watch"]],
+        ["get --watch=true", ["get", "pods", "--watch=true"]],
+        ["get --watch_only (pflag treats _ as -)", ["get", "pods", "--watch_only"]],
+        ["get --watch-only", ["get", "pods", "--watch-only"]],
+        ["get -w", ["get", "pods", "-w"]],
+        ["get -w in a cluster", ["get", "pods", "-Aw"]],
+        ["get -w after a cluster", ["get", "pods", "-wA"]],
+        ["get -w=true", ["get", "pods", "-w=true"]],
+        ["get -w after a value", ["get", "pods", "-n", "default", "-w"]],
+        ["events --watch", ["events", "--watch"]],
+        ["events -w", ["events", "-w"]],
+        ["logs --follow", ["logs", "pod/x", "--follow"]],
+        ["logs --follow=true", ["logs", "pod/x", "--follow=true"]],
+        ["logs -f", ["logs", "pod/x", "-f"]],
+        ["logs -f in a cluster", ["logs", "pod/x", "-ft"]],
+      ];
+
+      for (const [label, argv] of streaming) {
+        test(`rejects ${label}`, () => {
+          expect(() => assertAllowedGenericCommand(argv)).toThrow(
+            /through kubectl_generic/
+          );
+        });
+      }
+
+      test("allows the same tokens where they do not stream", () => {
+        for (const argv of [
+          ["get", "pods", "--watch=false"],
+          ["get", "pods", "-w=false"],
+          ["get", "pods", "--follow"],
+          // "-f" is --filename for get and apply, "-w" is not a logs flag.
+          ["get", "-f", "pod.yaml"],
+          ["get", "-ofoo-w"],
+          ["apply", "-f", "pod.yaml"],
+          ["delete", "-f", "pod.yaml"],
+          ["logs", "pod/x", "-w"],
+          // -c takes a value: "-cf" is container "f", not --follow.
+          ["logs", "pod/x", "-cf"],
+          ["logs", "pod/x", "--follow=false"],
+          // Operands after "--" are not flags.
+          ["get", "pods", "--", "-w"],
+          // rollout status exits when the rollout completes.
+          ["rollout", "status", "deployment/x", "--watch"],
+          ["rollout", "status", "deployment/x", "-w"],
+        ]) {
+          expect(() => assertAllowedGenericCommand(argv)).not.toThrow();
+        }
+      });
+    });
+
     test("ALLOW_KUBECTL_UNSAFE_FLAGS lifts the credential/long-running denials", () => {
       process.env.ALLOW_KUBECTL_UNSAFE_FLAGS = "true";
       expect(() =>
         assertAllowedGenericCommand(["config", "view", "--raw"])
       ).not.toThrow();
       expect(() => assertAllowedGenericCommand(["proxy"])).not.toThrow();
+      expect(() =>
+        assertAllowedGenericCommand(["get", "pods", "--watch"])
+      ).not.toThrow();
     });
   });
 
@@ -161,6 +218,26 @@ describe("assertAllowedGenericCommand", () => {
           command: "config",
           subCommand: "view",
           flags: { raw: true, flatten: true, output: "json" },
+        })
+      ).rejects.toThrow(/through kubectl_generic/);
+    });
+
+    test("refuses get --watch from the flags object", async () => {
+      await expect(
+        kubectlGeneric(manager, {
+          command: "get",
+          resourceType: "pods",
+          flags: { watch: true },
+        })
+      ).rejects.toThrow(/through kubectl_generic/);
+    });
+
+    test("refuses logs --follow from args", async () => {
+      await expect(
+        kubectlGeneric(manager, {
+          command: "logs",
+          name: "nginx",
+          args: ["-f"],
         })
       ).rejects.toThrow(/through kubectl_generic/);
     });
