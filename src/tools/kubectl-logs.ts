@@ -1,6 +1,7 @@
 import { KubernetesManager } from "../types.js";
 import {
   assertNotFlagLike,
+  assertNotFollowing,
   execFileSyncSafe,
 } from "../security/kubectl-flags.js";
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
@@ -59,7 +60,8 @@ export const kubectlLogsSchema = {
       },
       follow: {
         type: "boolean",
-        description: "Follow logs output (not recommended, may cause timeouts)",
+        description:
+          "Not supported: following never exits and would block the server. Use tail or since instead",
         default: false,
       },
       labelSelector: {
@@ -93,6 +95,7 @@ export async function kubectlLogs(
     // The resource name is a positional operand; a leading "-" would make
     // kubectl parse it as a flag.
     assertNotFlagLike(input.name, "name");
+    assertNotFollowing(input.follow);
 
     const resourceType = (input.resourceType ?? "pod").toLowerCase();
     const name = input.name;
