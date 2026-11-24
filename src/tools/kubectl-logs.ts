@@ -147,6 +147,9 @@ export async function kubectlLogs(
           "-o",
           "jsonpath={.spec.selector.matchLabels}",
         ];
+        if (context) {
+          selectorArgs.push("--context", context);
+        }
       } else if (resourceType === "job") {
         // For jobs, we use the job-name label
         return getLabelSelectorLogs(`job-name=${name}`, namespace, input);
@@ -336,6 +339,9 @@ async function getLabelSelectorLogs(
       "-o",
       "jsonpath={.items[*].metadata.name}",
     ];
+    if (input.context) {
+      podsArgs.push("--context", input.context);
+    }
     const pods = execFileSyncSafe(command, podsArgs, {
       encoding: "utf8",
       maxBuffer: getSpawnMaxBuffer(),

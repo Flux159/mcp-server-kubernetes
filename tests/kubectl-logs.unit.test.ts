@@ -288,4 +288,47 @@ describe("kubectl_logs tool", () => {
       "prod",
     ]);
   });
+
+  test.each([
+    { resourceType: "deployment", name: "api" },
+    { resourceType: "job", name: "backup-29000000" },
+    { resourceType: "cronjob", name: "backup" },
+  ])(
+    "$resourceType path passes the context to every kubectl call",
+    async ({ resourceType, name }) => {
+      const jobList = {
+        items: [
+          {
+            metadata: {
+              name: "backup-29000000",
+              ownerReferences: [{ kind: "CronJob", name: "backup" }],
+            },
+          },
+        ],
+      };
+      mockedExecFileSync.mockImplementation((_file: any, args: any) => {
+        const argv: string[] = args;
+        if (argv.includes("logs")) return PLAIN_LOG;
+        if (argv.includes("jobs")) return JSON.stringify(jobList);
+        if (argv.includes("pods")) return "worker-pod";
+        if (argv.includes("deployment")) return '{"app":"api"}';
+        return "";
+      });
+
+      await kubectlLogs(mockK8sManager, {
+        resourceType,
+        name,
+        namespace: "ops",
+        context: "prod",
+      });
+
+      const calls = allArgs();
+      expect(calls.some((argv) => argv.includes("pods"))).toBe(true);
+      expect(calls.some((argv) => argv.includes("logs"))).toBe(true);
+      for (const argv of calls) {
+        expect(argv).toContain("--context");
+        expect(argv[argv.indexOf("--context") + 1]).toBe("prod");
+      }
+    }
+  );
 });
