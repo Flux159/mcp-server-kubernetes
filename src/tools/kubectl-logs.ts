@@ -147,30 +147,37 @@ export async function kubectlLogs(
           "-o",
           "jsonpath={.spec.selector.matchLabels}",
         ];
+        if (context) {
+          selectorArgs.push("--context", context);
+        }
       } else if (resourceType === "job") {
         // For jobs, we use the job-name label
         return getLabelSelectorLogs(`job-name=${name}`, namespace, input);
       } else if (resourceType === "cronjob") {
-        // For cronjobs, it's more complex - need to find the job first
-        const jobsArgs = [
-          "-n",
-          namespace,
-          "get",
-          "jobs",
-          "--selector=job-name=" + name,
-          "-o",
-          "jsonpath={.items[*].metadata.name}",
-        ];
+        // For cronjobs, it's more complex - need to find the job first.
+        // The Jobs a CronJob creates carry no label with the CronJob name,
+        // only an owner reference to it.
+        const jobsArgs = ["-n", namespace, "get", "jobs", "-o", "json"];
+        if (context) {
+          jobsArgs.push("--context", context);
+        }
         try {
-          const jobs = execFileSyncSafe(command, jobsArgs, {
-            encoding: "utf8",
-            maxBuffer: getSpawnMaxBuffer(),
-            env: { ...process.env, KUBECONFIG: process.env.KUBECONFIG },
-          })
-            .trim()
-            .split(" ");
+          const jobList = JSON.parse(
+            execFileSyncSafe(command, jobsArgs, {
+              encoding: "utf8",
+              maxBuffer: getSpawnMaxBuffer(),
+              env: { ...process.env, KUBECONFIG: process.env.KUBECONFIG },
+            })
+          );
+          const jobs: string[] = (jobList.items ?? [])
+            .filter((job: any) =>
+              (job.metadata?.ownerReferences ?? []).some(
+                (owner: any) => owner.kind === "CronJob" && owner.name === name
+              )
+            )
+            .map((job: any) => job.metadata.name);
 
-          if (jobs.length === 0 || (jobs.length === 1 && jobs[0] === "")) {
+          if (jobs.length === 0) {
             return {
               content: [
                 {
@@ -332,6 +339,9 @@ async function getLabelSelectorLogs(
       "-o",
       "jsonpath={.items[*].metadata.name}",
     ];
+    if (input.context) {
+      podsArgs.push("--context", input.context);
+    }
     const pods = execFileSyncSafe(command, podsArgs, {
       encoding: "utf8",
       maxBuffer: getSpawnMaxBuffer(),
